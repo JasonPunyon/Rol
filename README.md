@@ -90,12 +90,31 @@ public void CreatedIntegerIdsIncrease()
     Assert.AreEqual(2, second.Id);
     Assert.AreEqual(3, third.Id);
 
-    Assert.IsTrue(Store.Enumerate<IQuestion>().ToList().Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
+    
+}
+```
+
+To be honest, right now the Create method isn't that useful for interface with Id types other than int. You'll want to use Store.Get<>()
+
+##Store.Enumerate<>()
+
+If you've got integer ids and you're letting Rol handle the creation of those Ids, you can use `Store.Enumerate<>()` to walk through those objects in Id order.
+
+```c#
+[Test]
+public void CreatedIntegerIdsIncrease()
+{
+    var first = Store.Create<IQuestion>();
+    var second = Store.Create<IQuestion>();
+    var third = Store.Create<IQuestion>();       
+
+    var questions = Store.Enumerate<IQuestion>().ToList();
+
+    Assert.IsTrue(questions.Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
     Assert.AreEqual(3, Store.Enumerate<IQuestion>().Count());
 }
 ```
 
-To be honest, right now the Create method isn't that useful for interface with Id types other than int. You'll want to use...
 
 ##Store.Get<>()
 
