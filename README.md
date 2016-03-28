@@ -225,5 +225,12 @@ public interface IQuestion
     IRedisSet<string> Tags { get; set; }
     IRedisSet<IAnswer> Answers { get; set; }
 }
+
+public static void AnswerQuestion(int questionId, int userId, string aBody) 
+{
+    //And I don't even have to write you code to add the answer, you already know what it looks like...create the answer from the store, set the properties on the answer, get the question, add the answer to the question's answers collection.
+}
 ```
+
+
 
