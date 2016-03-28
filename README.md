@@ -213,6 +213,7 @@ public interface IAnswer
 {
     int Id { get; }
     IUser Answerer { get; set; }
+    IQuestion Question { get; set; }
     string Body { get; set; }
 }
 
@@ -228,7 +229,15 @@ public interface IQuestion
 
 public static void AnswerQuestion(int questionId, int userId, string aBody) 
 {
-    //And I don't even have to write you code to add the answer, you already know what it looks like...create the answer from the store, set the properties on the answer, get the question, add the answer to the question's answers collection.
+    //And I don't think I even have to write you code to add the answer, you already know what it looks like...because everything's just getting objects and setting properties.
+    
+    //But I'll write it anyway :)
+    var user = Store.Get<IUser>(userId);
+    var question = Store.Get<IQuestion>(questionId);
+    var answer = Store.Create<IAnswer>();
+    answer.Body = aBody;
+    answer.User = user;
+    answer.Question = question;
 }
 ```
 
