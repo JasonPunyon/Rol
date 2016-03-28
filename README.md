@@ -248,3 +248,4 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
 ```
 
 ###Async properties
+All the properties you've seen so far are synchronous. You get a property on your object and wait for StackExchange.Redis to go and get the data to return it to you. StackExchange.Redis also has powerful asynchronous support that you can tap into with Rol by using the Async<T> class.
