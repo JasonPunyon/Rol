@@ -26,9 +26,9 @@ The Store is how you get at your data, but at what data are you getting? The way
 ```c#
 public interface IQuestion
 {
-    public int Id { get; }
-    public string Title { get; set; }
-    public string Body { get; set; }
+    int Id { get; }
+    string Title { get; set; }
+    string Body { get; set; }
 }
 ```
 
