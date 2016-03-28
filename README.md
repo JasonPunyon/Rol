@@ -229,7 +229,8 @@ public interface IQuestion
 
 public static void AnswerQuestion(int questionId, int userId, string aBody) 
 {
-    //And I don't think I even have to write you code to add the answer, you already know what it looks like...because everything's just getting objects and setting properties.
+    //And I don't think I even have to write you code to add the answer.
+    //You can probably guess it, because everything's just getting objects and setting properties.
     
     //But I'll write it anyway :)
     var user = Store.Get<IUser>(userId);
@@ -238,6 +239,7 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
     answer.Body = aBody;
     answer.User = user;
     answer.Question = question;
+    question.Answers.Add(answer);
 }
 ```
 
