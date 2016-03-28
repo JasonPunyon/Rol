@@ -281,6 +281,6 @@ public async Task WorkWithTitle(int questionId)
 }
 ```
 
-#Wow, surprised you made it down here. Well done!
+#You made it all the way down here! Well done!
 
-More to come.
+More to come. Until then, enjoy yourself a tasty beverage and thank you for reading.
