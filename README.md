@@ -248,4 +248,28 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
 ```
 
 ###Async properties
-All the properties you've seen so far are synchronous. You get a property on your object and wait for StackExchange.Redis to go and get the data to return it to you. StackExchange.Redis also has powerful asynchronous support that you can tap into with Rol by using the Async<T> class.
+
+You can tap into Rol's async support by declaring your properties of type `Async<T>`. Async<T>'s are awaitable just like tasks, and they're convertible to Task<T>, and they're convertible from their underlying types, so you can set them. Let's say we wanted to access the Title data of our IQuestion asynchronously...
+
+```c#
+public interface IQuestion 
+{
+    int Id { get; }
+    string Title { get; set; }
+    Async<string> TitleAsync { get; set; }
+}
+
+public async Task WorkWithTitle(int questionId) 
+{
+    var q = Store.Get<IQuestion>(questionId);
+    q.Title = "This is a great title, isn't it?"; //Set the title synchronously.
+    
+    var title = await q.TitleAsync; //Await the title asynchronously
+    Console.WriteLine(title); //"This is a great title, isn't it?";
+    
+    q.TitleAsync = "New Title!"; //T's are implicitly convertible to Async<T> so we can set properties values asynchronously. Rol handles everything under the covers.
+    
+    title = q.Title; //Read the title synchronously
+    Console.WriteLine(title); //"New Title!"
+}
+```
