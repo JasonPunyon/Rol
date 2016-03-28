@@ -59,11 +59,11 @@ Console.WriteLine($"Question Title: {question.Title}");
 Console.WriteLine($"Question.Body: {question.Body}");
 ```
 
-##Ids
+###Ids
 
 Objects in the store are accessed by Id, so your interface must have a get-only Id property. Ids can be `int`s, `string`s, or `Guid`s.
 
-###Store.Create<>()
+##Store.Create<>()
 
 `Store.Create<>()` takes an optional `id` argument so you can create objects by Id...
 
@@ -97,7 +97,7 @@ public void CreatedIntegerIdsIncrease()
 
 To be honest, right now the Create method isn't that useful for interface with Id types other than int. You'll want to use...
 
-###Store.Get<>()
+##Store.Get<>()
 
 Looks just like the create method but requires the id argument (Rol has to know what id you want to get).
 
