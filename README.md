@@ -246,3 +246,5 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
     question.Answers.Add(answer);
 }
 ```
+
+###Async properties
