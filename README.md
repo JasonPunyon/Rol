@@ -10,15 +10,6 @@ You can install Rol from nuget...
 PM> Install-Package Rol
 ```
 
-##The Store
-
-The Store is how you get at your data in redis. Rol wraps StackExchange.Redis's ConnectionMultiplexer to do it's work, so that's all it needs.
-
-```c#
-var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
-var store = new Rol.Store(connection);
-```
-
 ##Your data
 
 The Store is how you get at your data, but at what data are you getting? The way you tell Rol about the data you want to store is by defining an interface that has the shape that you want. Let's say we're building a silly question and answer website and we want to store our question data. Questions have an integer Id, a Title ("How do I X?"), and a Body with the detail of the question. We'd define this interface...
@@ -62,6 +53,16 @@ Console.WriteLine($"Question.Body: {question.Body}");
 ###Ids
 
 Objects in the store are accessed by Id, so your interface must have a get-only Id property. Ids can be `int`s, `string`s, or `Guid`s.
+
+##The Store
+
+The Store is how you get at your data in redis. Rol wraps StackExchange.Redis's ConnectionMultiplexer to do it's work, so that's all it needs.
+
+```c#
+var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
+var store = new Rol.Store(connection);
+```
+
 
 ##Store.Create<>()
 
