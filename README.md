@@ -59,11 +59,24 @@ Console.WriteLine($"Question Title: {question.Title}");
 Console.WriteLine($"Question.Body: {question.Body}");
 ```
 
-###Ids
+##Ids
 
-You access objects in the Store by Id, so your interface must have a get-only Id property. Ids can be `int`s, `string`s, or `Guid`s.
+Objects in the store are accessed by Id, so your interface must have a get-only Id property. Ids can be `int`s, `string`s, or `Guid`s.
 
-If your type's Id is an integer and you don't provide an id to the , Rol works a bit like a database table with an auto-incrementing primary key.
+###The Create Method
+
+`Store.Create<>()` takes an optional `id` argument so you can create objects by Id...
+
+```c#
+[Test]
+public void InterfaceWithIntKeyCanBeCreated()
+{
+    var withIntId = Store.Create<IQuestion>(3);
+    Assert.AreEqual(3, withIntId.Id);
+}
+```
+
+If your type's Id is an integer you can also omit the id argument, and Rol will work like a database table with an auto-incrementing primary key.
 
 ```c#
 [Test]
@@ -82,3 +95,25 @@ public void CreatedIntegerIdsIncrease()
 }
 ```
 
+To be honest, right now the Create method isn't that useful for interface with Id types other than int. You'll want to use...
+
+###The Get Method
+
+Looks just like the create method but requires the id argument (Rol has to know what id you want to get).
+
+```c#
+[Test]
+public void InterfaceWithStringKeyCanGetGot()
+{
+    var withStringId = Store.Get<IWithStringId>("Hello");
+    Assert.AreEqual("Hello", withStringId.Id);
+}
+
+[Test]
+public void InterfaceWithGuidKeyCanGetGot()
+{
+    var id = Guid.NewGuid();
+    var withGuidId = Store.Get<IWithGuidId>(id);
+    Assert.AreEqual(id, withGuidId.Id);
+}
+```
