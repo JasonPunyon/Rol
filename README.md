@@ -249,7 +249,7 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
 
 ###Async properties
 
-You can tap into Rol's async support by declaring your properties of type `Async<T>`. Async<T>'s are awaitable just like tasks, and they're convertible to Task<T>, and they're convertible from their underlying types, so you can set them. Let's say we wanted to access the Title data of our IQuestion asynchronously...
+You can tap into Rol's async support by declaring your properties of type `Async<T>`. Async<T>'s are awaitable just like tasks, and they're convertible to Task<T>, and they're convertible from their underlying types. Let's say we wanted to access the Title data of our IQuestion asynchronously...
 
 ```c#
 public interface IQuestion 
@@ -271,5 +271,16 @@ public async Task WorkWithTitle(int questionId)
     
     title = q.Title; //Read the title synchronously
     Console.WriteLine(title); //"New Title!"
+    
+    //Let's say we had a jillion questions and we wanted to pull their titles out of redis asynchronously...
+    var titleTasks = Store.Enumerate<IQuestion>().ToDictionary(o => o.Id, o => o.TitleAsync);
+    
+    store.WaitAll(titleTasks.Values.ToArray()); //Wait for all the underlying tasks to complete.
+    
+    var titles = titleTasks.ToDictionary(o => o.Key, o => o.Value.Result);
 }
 ```
+
+#Wow, surprised you made it down here. Well done!
+
+More to come.
