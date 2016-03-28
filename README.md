@@ -32,6 +32,12 @@ public interface IQuestion
 }
 ```
 
+..and Rol does the rest. By which I mean:
+
+1. Rol lazily implements a concrete type that implements the IQuestion interface.
+2. The properties on that concrete type read and write data from redis using StackExchange.Redis. They calculate where data belongs in redis based on the interface type (IQuestion), the Id of the particular instance you're working with, and the name of the property.
+3. Rol lazily implements all the functions the Store needs to work with the data.
+
 To create a question we go to the Store...
 
 ```c#
