@@ -1,5 +1,4 @@
 ﻿using System;
-using System.CodeDom;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -8,6 +7,7 @@ using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
+using Jil;
 using Sigil;
 using Sigil.NonGeneric;
 using StackExchange.Redis;
@@ -1174,7 +1174,7 @@ namespace Rol
             }
 
             //Otherwise, json serialize it.
-            return t => (RedisValue) Jil.JSON.Serialize(t);
+            return t => (RedisValue) JSON.Serialize(t);
         } 
     }
 
@@ -1298,7 +1298,7 @@ namespace Rol
                 }
             }
 
-            return (v, s) => Jil.JSON.Deserialize<T>(v);
+            return (v, s) => JSON.Deserialize<T>(v);
         }
     }
 
