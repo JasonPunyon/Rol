@@ -58,3 +58,27 @@ Console.WriteLine($"Question Id: {question.Id}");
 Console.WriteLine($"Question Title: {question.Title}");
 Console.WriteLine($"Question.Body: {question.Body}");
 ```
+
+###Ids
+
+You access objects in the Store by Id, so your interface must have a get-only Id property. Ids can be `int`s, `string`s, or `Guid`s.
+
+If your type's Id is an integer and you don't provide an id to the , Rol works a bit like a database table with an auto-incrementing primary key.
+
+```c#
+[Test]
+public void CreatedIntegerIdsIncrease()
+{
+    var first = Store.Create<IQuestion>();
+    var second = Store.Create<IQuestion>();
+    var third = Store.Create<IQuestion>();            
+
+    Assert.AreEqual(1, first.Id);
+    Assert.AreEqual(2, second.Id);
+    Assert.AreEqual(3, third.Id);
+
+    Assert.IsTrue(Store.Enumerate<IQuestion>().ToList().Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
+    Assert.AreEqual(3, Store.Enumerate<IQuestion>().Count());
+}
+```
+
