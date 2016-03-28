@@ -133,3 +133,49 @@ public void InterfaceWithGuidKeyCanGetGot()
     Assert.AreEqual(id, withGuidId.Id);
 }
 ```
+
+## What kinds of properties can I use in my interfaces?
+
+###You can use your basic types...
+
+`bool`, `bool?`, `int`, `int?`, `string`, `double`, `double?`, `long`, `long?`, `DateTime`
+
+###References
+
+Our question and answer site is pretty lame right now. We can't even tell you who asked the question. So let's say we've got our user data...
+
+```c#
+public interface IUser 
+{
+    int Id { get; } //Gotta have it.
+    string Name { get; set; }
+    int Reputation { get; set; }
+}
+```
+
+And we'll update our question interface to...
+
+```c#
+public interface IQuestion
+{
+    int Id { get; }
+    IUser Asker { get; set; }
+    string Title { get; set; }
+    string Body { get; set; }
+}
+```
+
+And when our user asks the question we can just set the User property on the Question...
+
+```c#
+public static void AskQuestion(int userId, string qTitle, string qBody) 
+{
+    var user = Store.Get<IUser>(userId);
+    var question = Store.Create<IQuestion>();
+    question.Title = qTitle;
+    question.Body = qBody;
+    question.Asker = user; //Isn't it just magical?
+}
+```
+
+###Redis Collections
