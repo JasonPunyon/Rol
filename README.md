@@ -2,10 +2,6 @@
 
 Rol is a C# library that makes storing and working with data in redis as easy as declaring an interface, plus some other bells and whistles. It's built on StackExchange.Redis and Sigil.
 
-##Installation
-
-
-
 ##Getting started
 
 You can install Rol from nuget...
