@@ -179,3 +179,51 @@ public static void AskQuestion(int userId, string qTitle, string qBody)
 ```
 
 ###Redis Collections
+
+You can add redis collections to your interfaces by using the `IRedisSet<T>`, `IRedisHash<TKey, TValue>`, and `IRedisSortedSet<T>` interfaces. Our questions need tags so they can be organized. Let's update our interface.
+
+```c#
+public interface IQuestion
+{
+    int Id { get; }
+    IUser Asker { get; set; }
+    string Title { get; set; }
+    string Body { get; set; }
+    IRedisSet<string> Tags { get; set; }
+}
+
+public static void AskQuestion(int userId, string qTitle, string qBody, string qTags) 
+{
+    var user = Store.Get<IUser>(userId);
+    var question = Store.Create<IQuestion>();
+    question.Title = qTitle;
+    question.Body = qBody;
+    question.Asker = user; //Isn't it just magical?
+    foreach (var tag in qTags.Split(' '))
+    {
+        question.Tags.Add(tag);
+    }
+}
+```
+
+The keys and values of your collections can be references as well. Questions need answers, right?
+
+```c#
+public interface IAnswer 
+{
+    int Id { get; }
+    IUser Answerer { get; set; }
+    string Body { get; set; }
+}
+
+public interface IQuestion
+{
+    int Id { get; }
+    IUser Asker { get; set; }
+    string Title { get; set; }
+    string Body { get; set; }
+    IRedisSet<string> Tags { get; set; }
+    IRedisSet<IAnswer> Answers { get; set; }
+}
+```
+
