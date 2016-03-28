@@ -51,6 +51,13 @@ namespace Rol.Tests
         }
 
         [Test]
+        public void InterfaceWithIntKeyCanBeCreated()
+        {
+            var withIntId = Store.Create<IIntId>(3);
+            Assert.AreEqual(3, withIntId.Id);
+        }
+
+        [Test]
         public async Task InterfaceWithIntKeyCanGetGotAsync()
         {
             var withIntId = await Store.GetAsync<IIntId>(3);

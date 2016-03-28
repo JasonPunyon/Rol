@@ -49,6 +49,11 @@ namespace Rol
         {
             return Rol.Enumerate<T>.Impl.Value(this);
         }
+
+        public void WaitAll<T>(Async<T>[] asyncs)
+        {
+            Connection.WaitAll(asyncs.Select(o => o.SetTask ?? o.Task).ToArray());
+        }
     }
 
     internal static class Construct<T>
