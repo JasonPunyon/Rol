@@ -89,8 +89,6 @@ public void CreatedIntegerIdsIncrease()
     Assert.AreEqual(1, first.Id);
     Assert.AreEqual(2, second.Id);
     Assert.AreEqual(3, third.Id);
-
-    
 }
 ```
 
@@ -98,7 +96,7 @@ To be honest, right now the Create method isn't that useful for interface with I
 
 ##Store.Enumerate<>()
 
-If you've got integer ids and you're letting Rol handle the creation of those Ids, you can use `Store.Enumerate<>()` to walk through those objects in Id order.
+If you've got integer ids and you're letting Rol handle the creation of those Ids, you can use `Store.Enumerate<>()` to walk through those objects in Id order. Again, it's trying to work like a database table with an auto-incrementing primary key.
 
 ```c#
 [Test]
@@ -111,10 +109,9 @@ public void CreatedIntegerIdsIncrease()
     var questions = Store.Enumerate<IQuestion>().ToList();
 
     Assert.IsTrue(questions.Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
-    Assert.AreEqual(3, Store.Enumerate<IQuestion>().Count());
+    Assert.AreEqual(3, questions.Count);
 }
 ```
-
 
 ##Store.Get<>()
 
