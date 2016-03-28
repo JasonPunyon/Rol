@@ -12,7 +12,7 @@ PM> Install-Package Rol
 
 ##Your data
 
-The Store is how you get at your data, but at what data are you getting? The way you tell Rol about the data you want to store is by defining an interface that has the shape that you want. Let's say we're building a silly question and answer website and we want to store our question data. Questions have an integer Id, a Title ("How do I X?"), and a Body with the detail of the question. We'd define this interface...
+The way you tell Rol about the data you want to store is by defining an interface that has the shape that you want. Let's say we're building a silly question and answer website and we want to store our question data. Questions have an integer Id, a Title ("How do I X?"), and a Body with the detail of the question. We'd define this interface...
 
 ```c#
 public interface IQuestion
@@ -63,7 +63,6 @@ var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
 var store = new Rol.Store(connection);
 ```
 
-
 ##Store.Create<>()
 
 `Store.Create<>()` takes an optional `id` argument so you can create objects by Id...
@@ -77,7 +76,7 @@ public void InterfaceWithIntKeyCanBeCreated()
 }
 ```
 
-If your type's Id is an integer you can also omit the id argument, and Rol will work like a database table with an auto-incrementing primary key.
+If your interface's Id is an integer you can also omit the id argument, and Rol will work like a database table with an auto-incrementing primary key.
 
 ```c#
 [Test]
