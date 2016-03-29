@@ -1,6 +1,6 @@
 # Rol
 
-Rol is a C# library that makes storing and working with data in redis as easy as declaring an interface, plus some other bells and whistles. It's built on StackExchange.Redis and Sigil.
+Rol is a C# library that makes storing and working with data in redis as easy as declaring an interface, plus some other bells and whistles. It's built on [StackExchange.Redis](https://github.com/StackExchange/StackExchange.Redis) and [Sigil](https://github.com/kevin-montrose/Sigil). Thanks and High Fives to [Marc Gravell](https://twitter.com/marcgravell) and [Kevin Montrose](https://twitter.com/kevinmontrose) (and all the other contributors to those libraries) for some great shoulders to stand on.
 
 I'm not nearly done with it yet, but it's already been extremely useful to me in some prototyping scenarios so I'm letting it into the wild to see what others think. Hit me on twitter @JasonPunyon or in the issues if you've got ideas. 
 
