@@ -281,6 +281,34 @@ public async Task WorkWithTitle(int questionId)
 }
 ```
 
+###POCOs
+
+Because let's face it, sometimes a property is a few fields together. POCOs get JSON serialized. The thing to watch out for is that changes made to the POCO don't get sent back to redis, you have to reset the POCO property on your interface type for it to be persisted.
+
+public class Location
+{
+    public double Lon { get; set; }
+    public double Lat { get; set; }
+}
+
+public interface IUser
+{
+    int Id { get; }
+    string Name { get; set; }
+    int Reputation { get; set; }
+    Location Location { get; set; }
+}
+
+public static void WorkWithLocation(int userId, double lon, double lat)
+{
+    var user = Store.Get<IUser>(userId);
+    var location = new Location { Lon = lon, Lat = lat };
+    user.Location = location;
+    
+    location.Lon = 3.0; //Nothing written to redis.
+    user.location = location; //The entire location object now gets serialized and persisted.
+}
+
 #You made it all the way down here! Well done!
 
 More to come. Until then, enjoy yourself a tasty beverage and thank you for reading.
