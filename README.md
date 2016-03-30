@@ -98,6 +98,9 @@ public void CreatedIntegerIdsIncrease()
 
 To be honest, right now the Create method isn't that useful for interface with Id types other than int. You'll want to use Store.Get<>()
 
+##Store.CreateAsync<>()
+Does the same thing as `Store.Create<>()`, but asynchronously.
+
 ##Store.Enumerate<>()
 
 If you've got integer ids and you're letting Rol handle the creation of those Ids, you can use `Store.Enumerate<>()` to walk through those objects in Id order. Again, it's trying to work like a database table with an auto-incrementing primary key.
@@ -137,6 +140,9 @@ public void InterfaceWithGuidKeyCanGetGot()
     Assert.AreEqual(id, withGuidId.Id);
 }
 ```
+##Store.GetAsync<>()
+
+Does the same thing as `Store.Get<>()`, but asynchronously.
 
 ## What kinds of properties can I use in my interfaces?
 
