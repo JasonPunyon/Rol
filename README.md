@@ -67,7 +67,7 @@ var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
 var store = new Rol.Store(connection);
 ```
 
-##Store.Create<T>()
+##Store.Create\<T>()
 
 `Store.Create<T>()` takes an optional `id` argument so you can create objects by Id...
 
@@ -98,10 +98,10 @@ public void CreatedIntegerIdsIncrease()
 
 To be honest, right now the Create method isn't that useful for interface with Id types other than int. You'll want to use Store.Get<T>()
 
-##Store.CreateAsync<T>()
+##Store.CreateAsync\<T>()
 Does the same thing as `Store.Create<T>()`, but asynchronously.
 
-##Store.Enumerate<T>()
+##Store.Enumerate\<T>()
 
 If you've got integer ids and you're letting Rol handle the creation of those Ids, you can use `Store.Enumerate<T>()` to walk through those objects in Id order. Again, it's trying to work like a database table with an auto-incrementing primary key.
 
@@ -120,7 +120,7 @@ public void CreatedIntegerIdsIncrease()
 }
 ```
 
-##Store.Get<T>()
+##Store.Get\<T>()
 
 Looks just like the create method but requires the id argument (Rol has to know what id you want to get).
 
@@ -140,7 +140,7 @@ public void InterfaceWithGuidKeyCanGetGot()
     Assert.AreEqual(id, withGuidId.Id);
 }
 ```
-##Store.GetAsync<T>()
+##Store.GetAsync\<T>()
 
 Does the same thing as `Store.Get<T>()`, but asynchronously.
 
