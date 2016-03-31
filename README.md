@@ -289,7 +289,7 @@ public async Task WorkWithTitle(int questionId)
 
 ###POCOs
 
-Because let's face it, sometimes a property is a few fields together. POCOs get JSON serialized. The thing to watch out for is that changes made to the POCO don't get sent back to redis, you have to reset the POCO property on your interface type for it to be persisted.
+Because let's face it, sometimes a property is a few fields together. POCOs get JSON serialized. The thing to watch out for is that changes made to the POCO don't get sent back to redis, you have to reset the POCO property on your interface instance for it to be persisted.
 
 ```c#
 public class Location
