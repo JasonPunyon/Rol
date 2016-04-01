@@ -54,6 +54,11 @@ namespace Rol
         {
             Connection.WaitAll(asyncs.Select(o => o.SetTask ?? o.Task).ToArray());
         }
+
+        public void WaitAll(Task[] tasks)
+        {
+            Connection.WaitAll(tasks);
+        }
     }
 
     internal static class Construct<T>
