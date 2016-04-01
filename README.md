@@ -60,7 +60,7 @@ Objects in the store are accessed by Id, so your interface must have a get-only 
 
 ##The Store
 
-The Store is how you get at your data in redis. Rol wraps StackExchange.Redis's ConnectionMultiplexer to do it's work, so that's all it needs.
+The Store is how you get at your data in redis. The Store wraps StackExchange.Redis's ConnectionMultiplexer to do it's work, so that's all it needs.
 
 ```c#
 var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
