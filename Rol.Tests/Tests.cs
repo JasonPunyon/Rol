@@ -118,6 +118,7 @@ namespace Rol.Tests
             IRedisSortedSet<string> StringLengthSortedSet { get; set; } 
             IRedisSet<IReferenceWithProperties> ReferencesWithProperties { get; set; }
             IRedisSortedSet<IReferenceWithProperties> ReferenceSortedByNameLength { get; } 
+            IRedisHyperLogLog<Guid> HyperLogLogOfGuids { get; set; }
             Async<int> IntPropAsync { get; set; }
             AnEnum AnEnumProperty { get; set; }
         }
@@ -355,6 +356,21 @@ namespace Rol.Tests
         }
 
         [Test]
+        public void GetHyperLogLog()
+        {
+            var withProps = Store.Get<IWithProperties>(1);
+            var hll = withProps.HyperLogLogOfGuids;
+
+            Assert.AreEqual(0, withProps.HyperLogLogOfGuids.Count());
+            foreach (var i in Enumerable.Range(1, 10000))
+            {
+                hll.Add(Guid.NewGuid());
+            }
+            Assert.AreNotEqual(0, hll.Count());
+            Console.WriteLine(hll.Count());
+        }
+
+        [Test]
         public async Task AsyncProperties()
         {
             var withProps = Store.Get<IWithProperties>(1);
@@ -488,6 +504,18 @@ namespace Rol.Tests
 
             Assert.AreEqual(1.0, sortedSet["What up"]);
             Assert.AreEqual(1, sortedSet.WithScoresBetween(0, 100).Count());
+        }
+
+        [Test]
+        public void NakedHyperLogLog()
+        {
+            var hyperLogLog = Store.Get<IRedisHyperLogLog<Guid>>((RedisKey) "/helloworld");
+            Assert.AreEqual(0, hyperLogLog.Count());
+            foreach (var i in Enumerable.Range(1, 10000))
+            {
+                hyperLogLog.Add(Guid.NewGuid());
+            }
+            Console.WriteLine(hyperLogLog.Count());
         }
     }
 }

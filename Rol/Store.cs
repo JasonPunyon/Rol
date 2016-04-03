@@ -100,7 +100,7 @@ namespace Rol
             var il = Emit<Func<object, Store, Task<T>>>.NewDynamicMethod();
 
             if (typeof (T).IsRedisSet() || typeof (T).IsRedisList() || typeof (T).IsRedisHash() ||
-                typeof (T).IsRedisSortedSet())
+                typeof (T).IsRedisSortedSet() || typeof(T).IsRedisHyperLogLog())
             {
                 il.LoadNull();
             }
@@ -136,7 +136,7 @@ namespace Rol
         {
             var il = Emit<Func<object, Store, T>>.NewDynamicMethod();
 
-            if (typeof (T).IsRedisSet() || typeof(T).IsRedisList() || typeof(T).IsRedisHash() || typeof(T).IsRedisSortedSet())
+            if (typeof (T).IsRedisSet() || typeof(T).IsRedisList() || typeof(T).IsRedisHash() || typeof(T).IsRedisSortedSet() || typeof(T).IsRedisHyperLogLog())
             {
                 il.LoadNull();
             }
@@ -397,6 +397,7 @@ namespace Rol
 
     public interface IRedisList<T> : IEnumerable<T>
     {
+        RedisKey Id { get; }
         int Count { get; }
         T GetByIndex(int index);
         Task<T> GetByIndexAsync(int index);
@@ -514,6 +515,7 @@ namespace Rol
 
     public interface IRedisHash<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
     {
+        RedisKey Id { get; }
         TValue this[TKey key, When when = When.Always] { get; set; }
         IEnumerable<TKey> Keys { get; }
         Task<IEnumerable<TKey>> KeysAsync { get; }
@@ -621,6 +623,7 @@ namespace Rol
 
     public interface IRedisSortedSet<TKey> : IEnumerable<TKey>
     {
+        RedisKey Id { get; }
         double this[TKey key] { get; set; }
         long Count();
         Task<long> CountAsync();
@@ -716,6 +719,59 @@ namespace Rol
         }
     }
 
+    public interface IRedisHyperLogLog<T>
+    {
+        RedisKey Id { get; }
+        bool Add(T element);
+        long Count();
+        void Merge(params IRedisHyperLogLog<T>[] otherHyperLogLogs);
+    }
+
+    internal class RedisHyperLogLog<T> : IRedisHyperLogLog<T>
+    {
+        public RedisKey _id;
+        public RedisKey Id { get { return _id; } }
+        public Store Store;
+
+        public RedisHyperLogLog() { }
+
+        public RedisHyperLogLog(RedisKey id, Store store)
+        {
+            _id = id;
+            Store = store;
+        }
+
+        public bool Add(T element)
+        {
+            return Store.Connection.GetDatabase().HyperLogLogAdd(_id, ToRedisValue<T>.Impl.Value(element));
+        }
+
+        public Task<bool> AddAsync(T element)
+        {
+            return Store.Connection.GetDatabase().HyperLogLogAddAsync(_id, ToRedisValue<T>.Impl.Value(element));
+        }
+
+        public long Count()
+        {
+            return Store.Connection.GetDatabase().HyperLogLogLength(_id);
+        }
+
+        public Task<long> CountAsync()
+        {
+            return Store.Connection.GetDatabase().HyperLogLogLengthAsync(_id);
+        }
+
+        public void Merge(params IRedisHyperLogLog<T>[] otherHyperLogLogs)
+        {
+            Store.Connection.GetDatabase().HyperLogLogMerge(_id, otherHyperLogLogs.Select(p => p.Id).ToArray());
+        }
+
+        public Task MergeAsync(params IRedisHyperLogLog<T>[] otherHyperLogLogs)
+        {
+            return Store.Connection.GetDatabase().HyperLogLogMergeAsync(_id, otherHyperLogLogs.Select(p => p.Id).ToArray());
+        }
+    }
+
     public class ImplementInheritanceAttribute : Attribute
     {
         
@@ -758,12 +814,13 @@ namespace Rol
         static Type ImplementType()
         {
             if (Model.RequestedType.IsRedisSet() || Model.RequestedType.IsRedisHash() ||
-                Model.RequestedType.IsRedisList() || Model.RequestedType.IsRedisSortedSet())
+                Model.RequestedType.IsRedisList() || Model.RequestedType.IsRedisSortedSet() || Model.RequestedType.IsRedisHyperLogLog())
             {
                 var res = (Model.RequestedType.IsRedisSet() ? typeof (RedisSet<>)
                             : Model.RequestedType.IsRedisHash() ? typeof (RedisHash<,>)
                             : Model.RequestedType.IsRedisList() ? typeof (RedisList<>)
-                            : Model.RequestedType.IsRedisSortedSet() ? typeof (RedisSortedSet<>) : null)
+                            : Model.RequestedType.IsRedisSortedSet() ? typeof (RedisSortedSet<>)
+                            : Model.RequestedType.IsRedisHyperLogLog() ? typeof(RedisHyperLogLog<>) : null)
                     .MakeGenericType(Model.RequestedType.GenericTypeArguments);
 
                 Model.IdField = res.GetField("_id");
@@ -848,7 +905,7 @@ namespace Rol
                 return;
             }
 
-            if (Type.IsRedisSet() || Type.IsRedisList() || Type.IsRedisHash() || Type.IsRedisSortedSet())
+            if (Type.IsRedisSet() || Type.IsRedisList() || Type.IsRedisHash() || Type.IsRedisSortedSet() || Type.IsRedisHyperLogLog())
             {
                 var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
                 var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
@@ -857,6 +914,7 @@ namespace Rol
                     : Type.IsRedisList() ? typeof (RedisList<>).MakeGenericType(Type.GenericTypeArguments[0])
                     : Type.IsRedisHash() ? typeof (RedisHash<,>).MakeGenericType(Type.GenericTypeArguments) 
                     : Type.IsRedisSortedSet() ? typeof(RedisSortedSet<>).MakeGenericType(Type.GenericTypeArguments)
+                    : Type.IsRedisHyperLogLog() ? typeof(RedisHyperLogLog<>).MakeGenericType(Type.GenericTypeArguments)
                     : null;
 
                 getIl.LoadConstant($"/{DeclaringTypeModel.RequestedType.Name}/{{0}}/{Name}");
@@ -1185,7 +1243,7 @@ namespace Rol
 
             //Otherwise, json serialize it.
             return t => (RedisValue) JSON.Serialize(t);
-        } 
+        }
     }
 
     public static class FromRedisKey<T>
@@ -1331,6 +1389,8 @@ namespace Rol
         public static bool IsRedisList(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IRedisList<>);
         public static bool IsRedisHash(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (IRedisHash<,>);
         public static bool IsRedisSortedSet(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (IRedisSortedSet<>);
+
+        public static bool IsRedisHyperLogLog(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (IRedisHyperLogLog<>);
         public static bool IsAsync(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (Async<>);
     }
 
