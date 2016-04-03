@@ -190,7 +190,7 @@ public static void AskQuestion(int userId, string qTitle, string qBody)
 
 ###Redis Collections
 
-You can add redis collections to your interfaces by using the `IRedisSet<T>`, `IRedisHash<TKey, TValue>`, and `IRedisSortedSet<T>` interfaces. Our questions need tags so they can be organized. Let's update our interface.
+You can add redis collections to your interfaces by using the `IRedisSet<T>`, `IRedisHash<TKey, TValue>`, `IRedisSortedSet<T>`, and `IRedisHyperLogLog<T>` interfaces. Our questions need tags so they can be organized. Let's update our interface.
 
 ```c#
 public interface IQuestion
