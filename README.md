@@ -314,7 +314,7 @@ public static void WorkWithLocation(int userId, double lon, double lat)
     
     location.Lon = 3.0; //Nothing written to redis.
     Console.WriteLine(user.Location.Lon); //It'll be the value of lon.
-    user.location = location; //The entire location object now gets serialized and persisted.
+    user.Location = location; //The entire location object now gets serialized and persisted.
     Console.WriteLine(user.Location.Lon); //3.0
 }
 ```
