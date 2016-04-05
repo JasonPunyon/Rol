@@ -8,7 +8,7 @@ I'm not nearly done with it yet, but it's already been extremely useful to me in
 
 ##Getting started
 
-You can install Rol from nuget...
+You can install Rol from nuget... [![NuGet Status](http://img.shields.io/nuget/v/Rol.svg?style=flat)](https://www.nuget.org/packages/Rol)
 
 ```powershell
 PM> Install-Package Rol
