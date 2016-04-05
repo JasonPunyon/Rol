@@ -355,7 +355,6 @@ public interface IStuff
     [RolName("HAHA")]
     int StuffInt { get; set; }
     
-    [RolName("StuffInt")]
     DateTime HAHA { get; set; }
 }
 ```
