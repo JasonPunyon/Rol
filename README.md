@@ -335,6 +335,16 @@ public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVer
 
 To mitigate the problem, you can use the `RolName` attribute to give Rol shorter names for those properties.
 
+```c#
+[RolName("i")]
+public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName
+{
+    int Id { get; }
+	[RolName("s")]
+    Async<string> StringPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName { get; set; }
+}
+```
+
 **Shoot Yourself In The Foot Warning**: Rol's gonna do what you tell it. So if you tell Rol to do something like this...
 
 ```c#
