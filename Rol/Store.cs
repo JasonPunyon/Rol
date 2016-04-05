@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
+using System.Runtime.Remoting.Metadata.W3cXsd2001;
 using System.Threading.Tasks;
 using Jil;
 using Sigil;
@@ -107,7 +108,7 @@ namespace Rol
             else if (TypeModel<T>.Model.ImplementInheritance)
             {
                 il.LoadArgument(1);
-                il.LoadConstant($"/{TypeModel<T>.Model.IdDeclaringInterface.Name}/{{0}}");
+                il.LoadConstant($"/{TypeModel<T>.Model.NameToUseInRedis}/{{0}}");
                 il.LoadArgument(0);
                 il.Call(MethodInfos.StringFormat);
                 il.Call(MethodInfos.StringToRedisKey);
@@ -143,7 +144,7 @@ namespace Rol
             else if (TypeModel<T>.Model.ImplementInheritance)
             {
                 il.LoadArgument(1);
-                il.LoadConstant($"/{TypeModel<T>.Model.IdDeclaringInterface.Name}/{{0}}");
+                il.LoadConstant($"/{TypeModel<T>.Model.NameToUseInRedis}/{{0}}");
                 il.LoadArgument(0);
                 il.Call(MethodInfos.StringFormat);
                 il.Call(MethodInfos.StringToRedisKey);
@@ -235,7 +236,7 @@ namespace Rol
             var il = Emit<Func<object, Store, bool>>.NewDynamicMethod();
 
             il.LoadArgument(1);
-            il.LoadConstant($"/{TypeModel<T>.Model.IdDeclaringInterface.Name}/{{0}}");
+            il.LoadConstant($"/{TypeModel<T>.Model.NameToUseInRedis}/{{0}}");
             il.LoadArgument(0);
             il.Call(MethodInfos.StringFormat);
             il.Call(MethodInfos.StringToRedisKey);
@@ -323,6 +324,7 @@ namespace Rol
         RedisKey Id { get; }
         bool Add(T value);
         Task<bool> AddAsync(T value);
+        Task<long> AddAsync(params T[] values);
         int Count { get; }
         Task<int> CountAsync { get; }
         bool Contains(T value);
@@ -375,6 +377,12 @@ namespace Rol
         {
             return Store.Connection.GetDatabase().SetAddAsync(Id, ToRedisValue<T>.Impl.Value(value));
         }
+
+        public Task<long> AddAsync(params T[] values)
+        {
+            return Store.Connection.GetDatabase().SetAddAsync(Id, values.Select(ToRedisValue<T>.Impl.Value).ToArray());
+        }
+
         public int Count => (int)Store.Connection.GetDatabase().SetLength(Id);
         public Task<int> CountAsync => (Store.Connection.GetDatabase().SetLengthAsync(Id).ContinueWith(t => (int) t.Result));
         public bool Contains(T value)
@@ -777,6 +785,15 @@ namespace Rol
         
     }
 
+    public class RolNameAttribute : Attribute
+    {
+        public string Name { get; set; }
+        public RolNameAttribute(string name)
+        {
+            Name = name;
+        }
+    }
+
     public static class TypeModel<T>
     {
         public static TypeModel Model;
@@ -800,7 +817,8 @@ namespace Rol
                     Name = o.Name,
                     Type = o.PropertyType,
                     DeclaringType = o.DeclaringType,
-                    DeclaringTypeModel = Model
+                    DeclaringTypeModel = Model,
+                    NameToUseInRedis = o.GetCustomAttribute<RolNameAttribute>()?.Name ?? o.Name
                 }).ToArray();
 
             var idProperty = Model.Properties.SingleOrDefault(o => o.Name == "Id");
@@ -809,6 +827,7 @@ namespace Rol
             Model.IdDeclaringInterface = idProperty?.DeclaringType;
             Model.IdType = idProperty?.Type;
             Model.ImplementInheritance = Model.IdDeclaringInterface?.GetCustomAttribute<ImplementInheritanceAttribute>() != null;
+            Model.NameToUseInRedis = Model.IdDeclaringInterface?.GetCustomAttribute<RolNameAttribute>()?.Name ?? Model.RequestedType.Name;
         }
 
         static Type ImplementType()
@@ -880,6 +899,7 @@ namespace Rol
         public FieldInfo StoreField;
         public PropertyInfo IdProperty;
         public bool ImplementInheritance;
+        public string NameToUseInRedis;
     }
 
     public class PropertyModel
@@ -888,6 +908,8 @@ namespace Rol
         public string Name { get; set; }
         public Type Type { get; set; }
         public Type DeclaringType { get; set; }
+        public string NameToUseInRedis { get; set; }
+
         public static readonly MethodAttributes MethodAttributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.SpecialName | MethodAttributes.NewSlot | MethodAttributes.HideBySig;
 
         public void ImplementProperty(TypeBuilder typeBuilder)
@@ -917,7 +939,7 @@ namespace Rol
                     : Type.IsRedisHyperLogLog() ? typeof(RedisHyperLogLog<>).MakeGenericType(Type.GenericTypeArguments)
                     : null;
 
-                getIl.LoadConstant($"/{DeclaringTypeModel.RequestedType.Name}/{{0}}/{Name}");
+                getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}/{NameToUseInRedis}");
                 getIl.LoadArgument(0);
                 getIl.LoadField(DeclaringTypeModel.IdField);
 
@@ -948,7 +970,7 @@ namespace Rol
 
                 getIl.LoadArgument(0);
                 getIl.LoadField(DeclaringTypeModel.StoreField);
-                getIl.LoadConstant($"/{DeclaringTypeModel.IdDeclaringInterface.Name}/{{0}}");
+                getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
                 getIl.LoadArgument(0);
                 getIl.LoadField(DeclaringTypeModel.IdField);
 
@@ -959,7 +981,7 @@ namespace Rol
 
                 getIl.Call(MethodInfos.StringFormat);
                 getIl.Call(MethodInfos.StringToRedisKey);
-                getIl.LoadConstant(Name.Replace("Async", ""));
+                getIl.LoadConstant(NameToUseInRedis.Replace("Async", ""));
                 getIl.Call(getMi);
                 getIl.Return();
 
@@ -970,7 +992,7 @@ namespace Rol
 
                 setIl.LoadArgument(0);
                 setIl.LoadField(DeclaringTypeModel.StoreField);
-                setIl.LoadConstant($"/{DeclaringTypeModel.IdDeclaringInterface.Name}/{{0}}");
+                setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
                 setIl.LoadArgument(0);
                 setIl.LoadField(DeclaringTypeModel.IdField);
 
@@ -981,7 +1003,7 @@ namespace Rol
 
                 setIl.Call(MethodInfos.StringFormat);
                 setIl.Call(MethodInfos.StringToRedisKey);
-                setIl.LoadConstant(Name.Replace("Async", ""));
+                setIl.LoadConstant(NameToUseInRedis.Replace("Async", ""));
                 setIl.LoadArgument(1);
                 setIl.Call(setMi);
                 setIl.Return();
@@ -997,7 +1019,7 @@ namespace Rol
                 getIl.LoadArgument(0);
                 getIl.LoadField(DeclaringTypeModel.StoreField);
 
-                getIl.LoadConstant($"/{DeclaringTypeModel.IdDeclaringInterface.Name}/{{0}}");
+                getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
                 getIl.LoadArgument(0);
                 getIl.LoadField(DeclaringTypeModel.IdField);
 
@@ -1009,7 +1031,7 @@ namespace Rol
                 getIl.Call(MethodInfos.StringFormat);
                 getIl.Call(MethodInfos.StringToRedisKey);
 
-                getIl.LoadConstant(Name);
+                getIl.LoadConstant(NameToUseInRedis);
 
                 var mi = typeof (RedisOperations).GetMethod("GetHashValue").MakeGenericMethod(typeof (string), Type);
                 getIl.Call(mi);
@@ -1023,7 +1045,7 @@ namespace Rol
                 setIl.LoadArgument(0);
                 setIl.LoadField(DeclaringTypeModel.StoreField);
 
-                setIl.LoadConstant($"/{DeclaringTypeModel.IdDeclaringInterface.Name}/{{0}}");
+                setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
                 setIl.LoadArgument(0);
                 setIl.LoadField(DeclaringTypeModel.IdField);
 
@@ -1035,7 +1057,7 @@ namespace Rol
                 setIl.Call(MethodInfos.StringFormat);
                 setIl.Call(MethodInfos.StringToRedisKey);
 
-                setIl.LoadConstant(Name);
+                setIl.LoadConstant(NameToUseInRedis);
                 setIl.LoadArgument(1);
 
                 mi = typeof (RedisOperations).GetMethod("SetHashValue").MakeGenericMethod(typeof (string), Type);
@@ -1197,7 +1219,7 @@ namespace Rol
                 var idProp = typeof(T).GetProperty("Id");
                 var idConversion = typeof(RedisValue).GetMethods().SingleOrDefault(o => o.Name.In("op_Implicit", "op_Explicit") && o.GetParameters()[0].ParameterType == idProp.PropertyType);
 
-                if (idConversion != null)
+                if (idConversion != null || idProp.PropertyType == typeof(RedisKey))
                 {
                     var branch = il.DefineLabel();
 
@@ -1207,7 +1229,16 @@ namespace Rol
 
                     il.LoadArgument(0);
                     il.CallVirtual(typeof(T).GetProperty("Id").GetGetMethod());
-                    il.Call(idConversion);
+                    if (idConversion != null)
+                    {
+                        il.Call(idConversion);
+                    }
+                    else //idProp.PropertyType == typeof (RedisKey)
+                    {
+                        il.Call(typeof (RedisKey).GetMethods().Single(o => o.Name == "op_Implicit" && o.ReturnType == typeof (byte[])));
+                        il.Call(typeof (RedisValue).GetMethods().Single(o =>o.Name == "op_Implicit" && o.GetParameters()[0].ParameterType == typeof (byte[])));
+                    }
+                    
                     il.Return();
 
                     il.MarkLabel(branch);
@@ -1239,6 +1270,30 @@ namespace Rol
                     il.Return();
                     return il.CreateDelegate();
                 }
+            }
+
+            if (typeof (T) == typeof (RedisKey))
+            {
+                var redisKeyToByteArray = typeof (RedisKey).GetMethods().Single(o => o.Name == "op_Implicit" && o.ReturnType == typeof (byte[]));
+                var byteArrayToRedisValue = typeof (RedisValue).GetMethods().Single(o => o.Name == "op_Implicit" && o.GetParameters()[0].ParameterType == typeof (byte[]));
+
+                il.LoadArgument(0);
+                il.Call(redisKeyToByteArray);
+                il.Call(byteArrayToRedisValue);
+                il.Return();
+
+                return il.CreateDelegate();
+            }
+
+            if (typeof (T) == typeof (Guid))
+            {
+                var byteArrayToRedisValue = typeof(RedisValue).GetMethods().Single(o => o.Name == "op_Implicit" && o.GetParameters()[0].ParameterType == typeof(byte[]));
+
+                il.LoadArgumentAddress(0);
+                il.Call(typeof (Guid).GetMethod("ToByteArray"));
+                il.Call(byteArrayToRedisValue);
+                il.Return();
+                return il.CreateDelegate();
             }
 
             //Otherwise, json serialize it.
@@ -1290,7 +1345,7 @@ namespace Rol
                 var idProp = typeof(T).GetProperty("Id");
                 var idConversion = typeof(RedisValue).GetMethods().SingleOrDefault(o => o.Name.In("op_Implicit", "op_Explicit") && o.ReturnType == idProp.PropertyType);
 
-                if (idConversion != null)
+                if (idConversion != null || idProp.PropertyType == typeof(RedisKey))
                 {
                     var il = Emit<Func<RedisValue, Store, T>>.NewDynamicMethod();
 
@@ -1309,7 +1364,16 @@ namespace Rol
                     il.Call(value);
 
                     il.LoadArgument(0);
-                    il.Call(idConversion);
+                    if (idConversion != null)
+                    {
+                        il.Call(idConversion);
+                    }
+                    else
+                    {
+                        il.Call(typeof (RedisValue).GetMethods().Single(o => o.Name == "op_Implicit" && o.ReturnType == typeof(byte[])));
+                        il.Call(typeof (RedisKey).GetMethods().Single(o => o.Name == "op_Implicit" && o.GetParameters()[0].ParameterType == typeof (byte[])));
+                    }
+                    
                     if (TypeModel<T>.Model.IdType.IsValueType)
                     {
                         il.Box(TypeModel<T>.Model.IdType);
@@ -1364,6 +1428,17 @@ namespace Rol
 
                     return il.CreateDelegate();
                 }
+            }
+
+            if (typeof (T) == typeof (Guid))
+            {
+                var il = Emit<Func<RedisValue, Store, T>>.NewDynamicMethod();
+
+                il.LoadArgument(0);
+                il.Call(typeof (RedisValue).GetMethods().Single(o => o.Name == "op_Implicit" && o.ReturnType == typeof (byte[])));
+                il.NewObject(typeof (Guid).GetConstructors().Single(o => o.GetParameters()[0].ParameterType == typeof (byte[])));
+                il.Return();
+                return il.CreateDelegate();
             }
 
             return (v, s) => JSON.Deserialize<T>(v);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
 using StackExchange.Redis;
@@ -14,20 +15,30 @@ namespace Rol.Tests
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            Connection = ConnectionMultiplexer.Connect("localhost:6379,allowAdmin=true");
+            Connection = ConnectionMultiplexer.Connect("localhost:6379,allowAdmin=true,syncTimeout=100000");
             Store = new Store(Connection);
         }
 
         [SetUp]
         public void Setup()
         {
-            Connection.GetServer(Connection.GetEndPoints()[0]).FlushDatabase();   
+            Connection.GetServer(Connection.GetEndPoints()[0]).FlushDatabase();
         }
     }
 
     [TestFixture]
     public class Get : RolFixture
     {
+        public interface IRedisKeyId
+        {
+            RedisKey Id { get; }
+        }
+
+        public interface IByteArrayId
+        {
+            byte[] Id { get; }
+        }
+
         public interface IIntId
         {
             int Id { get; }
@@ -41,6 +52,21 @@ namespace Rol.Tests
         public interface IGuidId
         {
             Guid Id { get; }
+        }
+
+        [Test]
+        public void InterfaceWithRedisKeyIdCanGetGot()
+        {
+            var withRedisKeyId = Store.Get<IRedisKeyId>((RedisKey) "Key");
+            Assert.AreEqual((RedisKey) "Key", withRedisKeyId.Id);
+        }
+
+        [Test]
+        public void InterfaceWithByteArrayIdCanGetGot()
+        {
+            var key = new byte[] {1, 2, 3, 4};
+            var withByteArrayId = Store.Get<IByteArrayId>(key);
+            Assert.True(key.SequenceEqual(withByteArrayId.Id));
         }
 
         [Test]
@@ -516,6 +542,57 @@ namespace Rol.Tests
                 hyperLogLog.Add(Guid.NewGuid());
             }
             Console.WriteLine(hyperLogLog.Count());
+        }
+    }
+
+    [TestFixture]
+    public class NameMapping : RolFixture
+    {
+        public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName
+        {
+            int Id { get; }
+            Async<string> StringPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName { get; set; }
+        }
+
+        [RolName("a")]
+        public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute
+        {
+            int Id { get; }
+            [RolName("b")]
+            Async<string> StringPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute { get; set; }
+        }
+
+        [Test]
+        public void TestMemorySavings()
+        {
+            var createTasks = Enumerable.Range(1, 100000).Select(o =>Store.CreateAsync<IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName>()).ToArray();
+            Store.WaitAll(createTasks);
+
+            var setTasks = createTasks.Select(o => o.Result).Select(o => o.StringPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName = "Hello, world!").ToArray();
+            Store.WaitAll(setTasks);
+
+            Thread.Sleep(10000);
+
+            var server = Store.Connection.GetServer(Store.Connection.GetEndPoints()[0]);
+
+            var mem = server.Info("memory")[0].Single(o => o.Key == "used_memory").Value;
+
+            Console.WriteLine($"Memory used with long names: {mem:0,000}");
+            server.FlushAllDatabases();
+
+            var createTasks2 = Enumerable.Range(1, 100000).Select(o =>Store.CreateAsync<IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute>()).ToArray();
+            Store.WaitAll(createTasks2);
+
+            var setTasks2 = createTasks2.Select(o => o.Result).Select(o => o.StringPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute = "Hello, world!").ToArray();
+            Store.WaitAll(setTasks2);
+
+            Thread.Sleep(10000);
+
+            var mem2 = server.Info("memory")[0].Single(o => o.Key == "used_memory").Value;
+
+            Console.WriteLine($"Memory used with short names: {mem2:0,000}");
+
+            Assert.Less(mem2, mem);
         }
     }
 }
