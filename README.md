@@ -321,7 +321,7 @@ public static void WorkWithLocation(int userId, double lon, double lat)
 
 ##RolNameAttribute
 
-One problem of storing objects in hashes like this is the overhead of Type and Property names. To put it ridiculously...
+One problem with storing objects in hashes like this is the overhead of type and property names. To put it ridiculously...
 
 ```c#
 public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName
@@ -333,7 +333,7 @@ public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVer
 
 ...interfaces like that will waste a goodly amount of valuable redis memory repeating those type and property names in every object's hash.
 
-To mitigate the problem, you can use the `RolName` attribute to give Rol shorter names for those properties.
+To mitigate the problem, you can use the `RolName` attribute to give Rol shorter names to use for those properties in redis.
 
 ```c#
 [RolName("i")]
@@ -350,16 +350,15 @@ public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVer
 ```c#
 public interface IStuff 
 {
-	int Id { get; }
-	
-	[RolName("HAHA")]
-	int StuffInt { get; set; }
-	
-	[RolName("StuffInt")]
-	DateTime HAHA { get; set; }
+    int Id { get; }
+    
+    [RolName("HAHA")]
+    int StuffInt { get; set; }
+    
+    [RolName("StuffInt")]
+    DateTime HAHA { get; set; }
 }
 ```
-
 ...Rol will faithfully follow you into oblivion, no questions asked.
 
 #You made it all the way down here! Well done!
