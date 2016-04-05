@@ -16,7 +16,7 @@ PM> Install-Package Rol
 
 ##Your data
 
-The way you tell Rol about the data you want to store is by defining an interface that has the shape that you want. Let's say we're building a silly question and answer website and we want to store our question data. Questions have an integer Id, a Title ("How do I X?"), and a Body with the detail of the question. We'd define this interface...
+The way you tell Rol about the data you want to store is by declaring an interface. Let's say we're building a silly question and answer website and we want to store our question data. Questions have an integer Id, a Title ("How do I X?"), and a Body with the detail of the question. We'd declare this interface...
 
 ```c#
 public interface IQuestion
@@ -46,7 +46,7 @@ question.Title = "How do I X?";
 question.Body = "I'm really interested in how to do X. I've tried Y and Z but they don't seem to be X. How do I do X?"
 ```
 
-And you're done. The data's in redis. If you want to read back the properties from redis...just read the properties of the question object...
+And you're done. The data's in redis. If you want to read back the data from redis...just read the properties of the object...
 
 ```c#
 Console.WriteLine($"Question Id: {question.Id}");
@@ -321,7 +321,7 @@ public static void WorkWithLocation(int userId, double lon, double lat)
 
 ##RolNameAttribute
 
-One problem with storing objects in hashes like this is the overhead of type and property names. To put it ridiculously...
+One problem with storing objects in hashes the way Rol does is the overhead of type and property names. To put it ridiculously...
 
 ```c#
 public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantName
