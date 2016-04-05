@@ -53,6 +53,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Async.cs" />
+    <Compile Include="ImplementInheritanceAttribute.cs" />
+    <Compile Include="RedisHash.cs" />
+    <Compile Include="RedisHyperLogLog.cs" />
+    <Compile Include="RedisList.cs" />
+    <Compile Include="RedisOperations.cs" />
+    <Compile Include="RedisSet.cs" />
+    <Compile Include="RedisSortedSet.cs" />
+    <Compile Include="RolNameAttribute.cs" />
     <Compile Include="Store.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
