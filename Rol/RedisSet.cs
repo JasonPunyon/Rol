@@ -18,6 +18,7 @@ namespace Rol
         Task<bool> ContainsAsync(T value);
         void Remove(T value);
         Task RemoveAsync(T value);
+        Task<IEnumerable<T>> GetAllAsync();
     }
 
     class RedisSet<T> : IRedisSet<T>
@@ -87,6 +88,11 @@ namespace Rol
         public Task RemoveAsync(T value)
         {
             return Store.Connection.GetDatabase().SetRemoveAsync(Id, ToRedisValue<T>.Impl.Value(value));
+        }
+
+        public async Task<IEnumerable<T>> GetAllAsync()
+        {
+            return (await Store.Connection.GetDatabase().SetMembersAsync(Id)).Select(o => FromRedisValue<T>.Impl.Value(o, Store));
         }
     }
 }

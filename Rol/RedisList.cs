@@ -24,6 +24,7 @@ namespace Rol
         T PopTail();
         Task<T> PopHeadAsync();
         Task<T> PopTailAsync();
+        Task<IEnumerable<T>> GetAllAsync();
     }
 
     class RedisList<T> : IRedisList<T>
@@ -108,6 +109,11 @@ namespace Rol
         public Task<T> PopTailAsync()
         {
             return Store.Connection.GetDatabase().ListRightPopAsync(_id).ContinueWith(o => FromRedisValue<T>.Impl.Value(o.Result, Store));
+        }
+
+        public async Task<IEnumerable<T>> GetAllAsync()
+        {
+            return (await Store.Connection.GetDatabase().ListRangeAsync(_id)).Select(o => FromRedisValue<T>.Impl.Value(o, Store));
         }
 
         public IEnumerator<T> GetEnumerator()
