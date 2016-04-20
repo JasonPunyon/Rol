@@ -569,4 +569,52 @@ namespace Rol.Tests
             Assert.Less(mem2, mem);
         }
     }
+
+    [TestFixture]
+    public class README : RolFixture
+    {
+        public interface IQuestion
+        {
+            int Id { get; }
+            string Title { get; set; }
+            string Body { get; set; }
+            int Score { get; set; }
+        }
+
+        [Test]
+        public void GetAndWorkWithQuestionFromStore()
+        {
+            var question = Store.Get<IQuestion>(42);
+            Assert.AreEqual(42, question.Id); //The object has the id you provided.
+            Assert.AreEqual(null, question.Title); //The object's properties have the default values for their types.
+            Assert.AreEqual(null, question.Body);
+            Assert.AreEqual(0, question.Score);
+
+            //To write data to redis, just set the properties on the object.
+            question.Title = "How do I X?";
+            question.Body = "I'm trying to X. I've tried Y and Z but they're not X. How do I X?";
+
+            //To read data from redis, just read the properties on the object.
+            var title = question.Title;
+            var body = question.Body;
+
+            Assert.AreEqual("How do I X?", title);
+            Assert.AreEqual("I'm trying to X. I've tried Y and Z but they're not X. How do I X?", body);
+        }
+
+        [Test]
+        public void CreatedIntegerIdsIncrease()
+        {
+            var first = Store.Create<IQuestion>();
+            var second = Store.Create<IQuestion>();
+            var third = Store.Create<IQuestion>();
+
+            Assert.AreEqual(1, first.Id);
+            Assert.AreEqual(2, second.Id);
+            Assert.AreEqual(3, third.Id);
+
+            Assert.IsTrue(Store.Enumerate<IQuestion>().ToList().Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
+            Assert.AreEqual(3, Store.Enumerate<IQuestion>().Count());
+        }
+    }
 }
