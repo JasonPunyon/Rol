@@ -73,7 +73,7 @@ public void GetAndWorkWithQuestionFromStore()
 }
 ```
 
-A couple things of note here:
+Notice:
 
 1. There's no explicit object creation step. You can ask the Store to Get any value of the interface's Id type and Rol will hand you back an object. I could have done this and it would've worked.
 
@@ -83,6 +83,29 @@ A couple things of note here:
 
 1. Also, there was no explicit "Read some stuff from Redis" operation. Every time you get a property's value, a read is issued to redis.
 1. Also, there was no explicit "Write some stuff to Redis" operation. Every time you set a property's value, a write is issued to redis.
+
+###Store.Create\<T>() / Store.Enumerate\<T>()
+
+If your interface's Id is an `int`, the Store can provide you a "database table with an auto-incrementing primary key"-like experience by using `.Create<T>()` and `.Enumerate<T>()`.
+
+```c#
+[Test]
+public void CreatedIntegerIdsIncrease()
+{
+    var first = Store.Create<IQuestion>();
+    var second = Store.Create<IQuestion>();
+    var third = Store.Create<IQuestion>();            
+
+    Assert.AreEqual(1, first.Id);
+    Assert.AreEqual(2, second.Id);
+    Assert.AreEqual(3, third.Id);
+
+    Assert.IsTrue(Store.Enumerate<IQuestion>().ToList().Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
+    Assert.AreEqual(3, Store.Enumerate<IQuestion>().Count());
+}
+```
+
+
 
 ## What kinds of properties can I use in my interfaces?
 
