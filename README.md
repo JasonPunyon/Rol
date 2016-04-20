@@ -45,7 +45,9 @@ var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
 var store = new Rol.Store(connection);
 ```
 
-##Store.Get\<T>()
+The Store is magical. You only need one instance of the Store for your entire application. The Store is not a unit-of-work context object like you might find in an ORM. Spin it up once at the beginning of your app, stick it in a static variable and use it from whenever and wherever you please, on different threads, whatever.
+
+###Store.Get\<T>()
 Rol requires little ceremony to start working with your data. If you already have the Id for an object you'd like to work with, just `Store.Get` that Id...
 
 ```c#
