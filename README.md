@@ -46,21 +46,41 @@ var store = new Rol.Store(connection);
 ```
 
 ##Store.Get\<T>()
-Rol requires very little ceremony to start working with your data. If you already have the Id for an object you'd like to work with, just `.Get` that Id...
-
-Note that this kind of behavior is different than what you might expect in an ORM. Creating objects isn't necessary, you just ask Rol for what you want and Rol gives it to you.
+Rol requires little ceremony to start working with your data. If you already have the Id for an object you'd like to work with, just `Store.Get` that Id...
 
 ```c#
 [Test]
-public void GetQuestionFromStore()
+public void GetAndWorkWithQuestionFromStore()
 {
-    var question = Store.Get<IQuestion>(42);
-    Assert.AreEqual(42, question.Id); //The object has the id you provided.
-    Assert.AreEqual(null, question.Title); //The object's properties have the default values for their types.
-    Assert.AreEqual(null, question.Body);
-    Assert.AreEqual(0, question.Score);
+	var question = Store.Get<IQuestion>(42);
+	Assert.AreEqual(42, question.Id); //The object has the id you provided.
+	Assert.AreEqual(null, question.Title); //The object's properties have the default values for their types.
+	Assert.AreEqual(null, question.Body);
+	Assert.AreEqual(0, question.Score);
+	
+	//To write data to redis, just set the properties on the object.
+	question.Title = "How do I X?";
+	question.Body = "I'm trying to X. I've tried Y and Z but they're not X. How do I X?";
+	
+	//To read data from redis, just read the properties on the object.
+	var title = question.Title;
+	var body = question.Body;
+	
+	Assert.AreEqual("How do I X?", title);
+	Assert.AreEqual("I'm trying to X. I've tried Y and Z but they're not X. How do I X?", body);
 }
 ```
+
+A couple things of note here:
+
+1. There's no explicit object creation step. You can ask the Store to Get any value of the interface's Id type and Rol will hand you back an object. I could have done this and it would've worked.
+
+    ```c#
+    var question = Store.Get<IQuestion>(new Random().Next());
+    ```
+
+1. Additionally, there's no explicit "QueryData" step. Getting properties on objects returned from the Store is the way you read data from redis.  
+1. Additionally, there's no explicit `SaveChanges` step either. Setting properties on objects returned from the Store *are* writes to redis. You set the property and the data has been written.  
 
 ## What kinds of properties can I use in my interfaces?
 
