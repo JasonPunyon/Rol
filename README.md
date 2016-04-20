@@ -323,6 +323,16 @@ public interface IStuff
 ```
 ...Rol will faithfully follow you into oblivion, no questions asked.
 
+##Equality
+
+A fun constraint in C# is that the only way for instances of interfaces to be considered equal is if they're the same object. Equality is important. You need equality to work for things to work like you want with Generic Collections and in other places.
+
+Rol makes equality work the only way it can, by guaranteeing you only get the same instance of an object per Type/Id combination. It does this by caching instances of objects forever.
+
+**Note for the future**: Infinitely growing caches is bad, especially if you don't need them, but I really like Equality working. I'm going to add an attribute to turn off the caching if you don't need it for certain types (so you can opt in to memory-savings/broken equality if you want), but by default it will be on for sanity.
+
+**Note**: 
+
 #You made it all the way down here! Well done!
 
 More to come. Until then, enjoy yourself a tasty beverage and thank you for reading.
