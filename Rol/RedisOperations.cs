@@ -43,7 +43,7 @@ namespace Rol
             var max = (int)store.Connection.GetDatabase().HashGet("TypeIds", TypeModel<T>.Model.IdDeclaringInterface.Name);
             for (var i = 1; i <= max; i++)
             {
-                yield return ConstructSubTyped<T>.Impl.Value(i, store);
+                yield return Construct<T>.Impl.Value(i, store);
             }
         }
 

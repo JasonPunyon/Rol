@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -118,6 +119,35 @@ namespace Rol.Tests
 
             Assert.IsTrue(Store.Enumerate<IIntId>().ToList().Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
             Assert.AreEqual(3, Store.Enumerate<IIntId>().Count());
+        }
+    }
+
+    [TestFixture]
+    public class Equality : RolFixture
+    {
+        public interface ISomeInterface
+        {
+            int Id { get; }
+        }
+
+        [Test]
+        public void ObjectsWithTheSameTypeAndSameIdAreEqualNoMatterWhereTheyComeFrom()
+        {
+            var theObject = Store.Get<ISomeInterface>(1);
+
+            //Get another one from the Store and they Should be equal...
+            Assert.True(theObject == Store.Get<ISomeInterface>(1));
+
+            //If you get it from a collection, they should be equal...
+            var theSet = Store.Get<IRedisSet<ISomeInterface>>((RedisKey) "TheSet");
+            theSet.Add(theObject);
+
+            Assert.True(theObject == theSet.First());
+
+            //Dictionaries work?
+            var d = new Dictionary<ISomeInterface, int>();
+            d[theObject] = 4;
+            Assert.True(d.ContainsKey(Store.Get<ISomeInterface>(1)));
         }
     }
 
@@ -412,76 +442,6 @@ namespace Rol.Tests
             Assert.AreEqual(AnEnum.ADefaultValue, withProps.AnEnumProperty);
             withProps.AnEnumProperty = AnEnum.AnotherValue;
             Assert.AreEqual(AnEnum.AnotherValue, withProps.AnEnumProperty);
-        }
-    }
-
-    [TestFixture]
-    public class Inheritance : RolFixture
-    {
-        [ImplementInheritance]
-        public interface IBase
-        {
-            int Id { get; }
-        }
-
-        public interface ISub : IBase
-        {
-            string SubProp { get; set; }
-        }
-
-        public interface ISubSub : ISub
-        {
-            string SubSubProp { get; set; }
-        }
-
-        [Test]
-        public void BaseAndSubclassShareIdSpace()
-        {
-            var base1 = Store.Create<IBase>();
-            var sub1 = Store.Create<ISub>();
-            var base2 = Store.Create<IBase>();
-            var sub2 = Store.Create<ISub>();
-            var subsub1 = Store.Create<ISubSub>();
-
-            Assert.AreEqual(1, base1.Id);
-            Assert.AreEqual(2, sub1.Id);
-            Assert.AreEqual(3, base2.Id);
-            Assert.AreEqual(4, sub2.Id);
-            Assert.AreEqual(5, subsub1.Id);
-        }
-
-        [Test]
-        public void EnumeratingPolymorphicCollectionReturnsObjectsOfCorrectType()
-        {
-            var base1 = Store.Create<IBase>();
-            var sub1 = Store.Create<ISub>();
-            sub1.SubProp = "Yup Yup;";
-
-            var base2 = Store.Create<IBase>();
-            var sub2 = Store.Create<ISub>();
-            var subsub1 = Store.Create<ISubSub>();
-
-            subsub1.SubSubProp = "Yup";
-
-            var stuff = Store.Enumerate<IBase>().ToList();
-
-            base1 = (IBase) stuff[0];
-            sub1 = (ISub)stuff[1];
-            base2 = (IBase)stuff[2];
-            sub2 = (ISub)stuff[3];
-            subsub1 = (ISubSub) stuff[4];
-
-            Assert.AreEqual("Yup", subsub1.SubSubProp);
-            Assert.AreEqual("Yup Yup;", sub1.SubProp);
-        }
-
-        [Test]
-        public void GettingPolymorphicValueReturnsObjectOfCorrectType()
-        {
-            var sub1 = Store.Create<ISub>();
-
-            var base1 = Store.Get<IBase>(1);
-            sub1 = (ISub) base1;
         }
     }
 

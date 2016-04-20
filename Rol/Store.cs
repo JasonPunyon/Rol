@@ -13,17 +13,59 @@ using StackExchange.Redis;
 
 namespace Rol
 {
+    public class Cache<T>
+    {
+        public static ConcurrentDictionary<object, T> Values;
+        public static Lazy<Action<T>> Add = new Lazy<Action<T>>(ImplementAdd);
+
+        private static Action<T> ImplementAdd()
+        {
+            var il = Emit<Action<T>>.NewDynamicMethod();
+
+            var values = typeof (Cache<T>).GetField("Values");
+
+            il.LoadField(values);
+            il.LoadArgument(0);
+            il.Call(TypeModel<T>.Model.IdDeclaringInterface.GetMethod("get_Id"));
+
+            if (TypeModel<T>.Model.IdType.IsValueType)
+            {
+                il.Box(TypeModel<T>.Model.IdType);
+            }
+
+            il.LoadArgument(0);
+            il.Call(typeof (ConcurrentDictionary<object, T>).GetMethod("set_Item"));
+            il.Return();
+            return il.CreateDelegate();
+        }
+
+        static Cache()
+        {
+            Values = new ConcurrentDictionary<object, T>();
+        }
+    }
+
     public class Store
     {
         public ConnectionMultiplexer Connection { get; set; }
+
         public Store(ConnectionMultiplexer connection)
         {
             Connection = connection;
         }
+
         public T Create<T>(object id = null)
         {
-            return Rol.Create<T>.Impl.Value(id, this);
+            if (id == null)
+            {
+                var result = Rol.Create<T>.Impl.Value(null, this);
+                Cache<T>.Add.Value(result);
+                return result;
+            }
+            
+            return Cache<T>.Values.GetOrAdd(id, i => Rol.Create<T>.Impl.Value(i, this));
         }
+
         public Task<T> CreateAsync<T>(object id = null)
         {
             return Rol.CreateAsync<T>.Impl.Value(id, this);
@@ -36,12 +78,12 @@ namespace Rol
 
         public T Get<T>(object id)
         {
-            return ConstructSubTyped<T>.Impl.Value(id, this);
+            return Cache<T>.Values.GetOrAdd(id, o => Construct<T>.Impl.Value(o, this));
         }
 
         public Task<T> GetAsync<T>(object id)
         {
-            return ConstructSubTyped<T>.AsyncImpl.Value(id, this);
+            return Task.FromResult(Construct<T>.Impl.Value(id, this));
         }
 
         public IEnumerable<T> Enumerate<T>()
@@ -86,116 +128,6 @@ namespace Rol
             il.StoreField(TypeModel<T>.Model.StoreField);
             il.Return();
             return il.CreateDelegate();
-        }
-    }
-
-    internal static class ConstructSubTyped<T>
-    {
-        public static Lazy<Func<object, Store, T>> Impl = new Lazy<Func<object, Store, T>>(Implement);
-        public static Lazy<Func<object, Store, Task<T>>> AsyncImpl = new Lazy<Func<object, Store, Task<T>>>(ImplementAsync);
-
-        private static Func<object, Store, Task<T>> ImplementAsync()
-        {
-            var il = Emit<Func<object, Store, Task<T>>>.NewDynamicMethod();
-
-            if (typeof (T).IsRedisSet() || typeof (T).IsRedisList() || typeof (T).IsRedisHash() ||
-                typeof (T).IsRedisSortedSet() || typeof(T).IsRedisHyperLogLog())
-            {
-                il.LoadNull();
-            }
-            else if (TypeModel<T>.Model.ImplementInheritance)
-            {
-                il.LoadArgument(1);
-                il.LoadConstant($"/{TypeModel<T>.Model.NameToUseInRedis}/{{0}}");
-                il.LoadArgument(0);
-                il.Call(MethodInfos.StringFormat);
-                il.Call(MethodInfos.StringToRedisKey);
-                il.LoadConstant("@@type");
-                var ghvAsync = typeof (RedisOperations).GetMethod("GetHashValueAsync")
-                    .MakeGenericMethod(typeof (string), typeof (string));
-
-                il.Call(ghvAsync);
-            }
-            else
-            {
-                il.LoadNull();
-            }
-
-            il.LoadArgument(0);
-            il.LoadArgument(1);
-
-            il.Call(typeof(ConstructSubTyped<T>).GetMethod("AsyncContinuation"));
-
-            il.Return();
-
-            return il.CreateDelegate();
-        }
-
-        private static Func<object, Store, T> Implement()
-        {
-            var il = Emit<Func<object, Store, T>>.NewDynamicMethod();
-
-            if (typeof (T).IsRedisSet() || typeof(T).IsRedisList() || typeof(T).IsRedisHash() || typeof(T).IsRedisSortedSet() || typeof(T).IsRedisHyperLogLog())
-            {
-                il.LoadNull();
-            }
-            else if (TypeModel<T>.Model.ImplementInheritance)
-            {
-                il.LoadArgument(1);
-                il.LoadConstant($"/{TypeModel<T>.Model.NameToUseInRedis}/{{0}}");
-                il.LoadArgument(0);
-                il.Call(MethodInfos.StringFormat);
-                il.Call(MethodInfos.StringToRedisKey);
-                il.LoadConstant("@@type");
-                var ghv = typeof (RedisOperations).GetMethod("GetHashValue")
-                    .MakeGenericMethod(typeof (string), typeof (string));
-
-                il.Call(ghv);
-            }
-            else
-            {
-                il.LoadNull();
-            }
-
-            il.Call(typeof (ConstructSubTyped<T>).GetMethod("GetFunc"));
-
-            il.LoadArgument(0);
-            il.LoadArgument(1);
-            il.Call(typeof (Func<object, Store, T>).GetMethod("Invoke"));
-            il.Return();
-
-            return il.CreateDelegate();
-        }
-
-        static readonly ConcurrentDictionary<string, Func<object, Store, T>> funcs = new ConcurrentDictionary<string, Func<object, Store, T>>();
-        public static Func<object, Store, T> GetFunc(string name)
-        {
-            name = name ?? typeof (T).AssemblyQualifiedName;
-            return funcs.GetOrAdd(name, t =>
-            {
-                var type = Type.GetType(t);
-                var constructor = typeof(Construct<>).MakeGenericType(type);
-                var impl = constructor.GetField("Impl");
-                var funcType = typeof(Func<,,>).MakeGenericType(typeof(object), typeof(Store), type);
-                var invoke = funcType.GetMethod("Invoke");
-                var value = typeof(Lazy<>).MakeGenericType(funcType).GetProperty("Value").GetGetMethod();
-
-                var il = Emit<Func<object, Store, T>>.NewDynamicMethod();
-                il.LoadField(impl);
-                il.CallVirtual(value);
-
-                il.LoadArgument(0);
-                il.LoadArgument(1);
-                il.CallVirtual(invoke);
-                il.Return();
-
-                return il.CreateDelegate();
-            });
-        }
-
-        public static Task<T> AsyncContinuation(Task<string> getTypeTask, object id, Store store)
-        {
-            return (getTypeTask ?? Task.FromResult<string>(null)).ContinueWith(name => GetFunc(name.Result)(id, store));
         }
     }
 
@@ -250,7 +182,7 @@ namespace Rol
         public static Lazy<Func<object, Store, T>> Impl = new Lazy<Func<object, Store, T>>(Implement);
         public static Func<object, Store, T> Implement()
         {
-            return ConstructSubTyped<T>.Impl.Value;
+            return Construct<T>.Impl.Value;
         }
     }
 
@@ -309,7 +241,6 @@ namespace Rol
             Model.HasIdProperty = idProperty != null;
             Model.IdDeclaringInterface = idProperty?.DeclaringType;
             Model.IdType = idProperty?.Type;
-            Model.ImplementInheritance = Model.IdDeclaringInterface?.GetCustomAttribute<ImplementInheritanceAttribute>() != null;
             Model.NameToUseInRedis = Model.IdDeclaringInterface?.GetCustomAttribute<RolNameAttribute>()?.Name ?? Model.RequestedType.Name;
         }
 
@@ -381,7 +312,6 @@ namespace Rol
         public FieldInfo IdField;
         public FieldInfo StoreField;
         public PropertyInfo IdProperty;
-        public bool ImplementInheritance;
         public string NameToUseInRedis;
     }
 
@@ -721,6 +651,12 @@ namespace Rol
     public static class FromRedisValue<T>
     {
         public static Lazy<Func<RedisValue, Store, T>> Impl = new Lazy<Func<RedisValue, Store, T>>(Implement);
+
+        public static Func<RedisValue, Store, T> Helper<TId>()
+        {
+            return (v, s) => v.IsNull ? default(T) : s.Get<T>(FromRedisValue<TId>.Impl.Value(v, s));
+        }
+
         private static Func<RedisValue, Store, T> Implement()
         {
             var implicitOrExplicitConversion = typeof(RedisValue).GetMethods().SingleOrDefault(o => o.Name.In("op_Implicit", "op_Explicit") && o.ReturnType == typeof(T));
@@ -743,48 +679,8 @@ namespace Rol
 
                 if (idConversion != null || idProp.PropertyType == typeof(RedisKey))
                 {
-                    var il = Emit<Func<RedisValue, Store, T>>.NewDynamicMethod();
-
-                    var branch = il.DefineLabel();
-
-                    il.LoadArgumentAddress(0);
-                    il.Call(typeof(RedisValue).GetMethod("get_IsNull"));
-                    il.BranchIfTrue(branch);
-
-                    var implField = typeof(ConstructSubTyped<T>).GetField("Impl");
-                    var value = typeof (Lazy<Func<object, Store, T>>).GetProperty("Value").GetGetMethod();
-                    var invoke = typeof (Func<object, Store, T>).GetMethod("Invoke");
-
-
-                    il.LoadField(implField);
-                    il.Call(value);
-
-                    il.LoadArgument(0);
-                    if (idConversion != null)
-                    {
-                        il.Call(idConversion);
-                    }
-                    else
-                    {
-                        il.Call(typeof (RedisValue).GetMethods().Single(o => o.Name == "op_Implicit" && o.ReturnType == typeof(byte[])));
-                        il.Call(typeof (RedisKey).GetMethods().Single(o => o.Name == "op_Implicit" && o.GetParameters()[0].ParameterType == typeof (byte[])));
-                    }
-                    
-                    if (TypeModel<T>.Model.IdType.IsValueType)
-                    {
-                        il.Box(TypeModel<T>.Model.IdType);
-                    }
-
-                    il.LoadArgument(1);
-                    il.Call(invoke);
-
-                    il.Return();
-
-                    il.MarkLabel(branch);
-                    il.LoadNull();
-                    il.Return();
-
-                    return il.CreateDelegate();
+                    var method = typeof (FromRedisValue<T>).GetMethod("Helper").MakeGenericMethod(TypeModel<T>.Model.IdType);
+                    return (Func<RedisValue, Store, T>)method.Invoke(null, new object[] {});
                 }
             }
 
