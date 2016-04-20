@@ -12,35 +12,22 @@ namespace Rol
         public static T CreateWithIncrementingIntegerId<T>(object id, Store store)
         {
             var db = store.Connection.GetDatabase();
-            id = id ?? (int)db.HashIncrement("TypeIds", TypeModel<T>.Model.IdDeclaringInterface.Name);
-            
-            //Set the @@type Field on the hash for subinterfaces...
-            var result = Construct<T>.Impl.Value(id, store);
+            id = id ?? (int)db.HashIncrement("TypeIds", TypeModel<T>.Model.RequestedType.Name);
 
-            if (TypeModel<T>.Model.RequestedType != TypeModel<T>.Model.IdDeclaringInterface)
-            {
-                db.HashSet(ToRedisKey<T>.Impl.Value(result), "@@type", TypeModel<T>.Model.RequestedType.AssemblyQualifiedName);
-            }
-
-            return result;
+            return Construct<T>.Impl.Value(id, store);
         }
 
         public static async Task<T> CreateWithIncrementingIntegerIdAsync<T>(object id, Store store)
         {
             var db = store.Connection.GetDatabase();
-            id = id ?? (int) (await db.HashIncrementAsync("TypeIds", TypeModel<T>.Model.IdDeclaringInterface.Name));
+            id = id ?? (int) (await db.HashIncrementAsync("TypeIds", TypeModel<T>.Model.RequestedType.Name));
 
-            var result = Construct<T>.Impl.Value(id, store);
-            if (TypeModel<T>.Model.RequestedType != TypeModel<T>.Model.IdDeclaringInterface)
-            {
-                await db.HashSetAsync(ToRedisKey<T>.Impl.Value(result), "@@type", TypeModel<T>.Model.RequestedType.AssemblyQualifiedName);
-            }
-            return result;
+            return Construct<T>.Impl.Value(id, store);
         }
 
         public static IEnumerable<T> EnumerateWithIntegerId<T>(Store store)
         {
-            var max = (int)store.Connection.GetDatabase().HashGet("TypeIds", TypeModel<T>.Model.IdDeclaringInterface.Name);
+            var max = (int)store.Connection.GetDatabase().HashGet("TypeIds", TypeModel<T>.Model.RequestedType.Name);
             for (var i = 1; i <= max; i++)
             {
                 yield return Construct<T>.Impl.Value(i, store);

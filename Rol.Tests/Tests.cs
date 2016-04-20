@@ -537,7 +537,7 @@ namespace Rol.Tests
 
             var mem = server.Info("memory")[0].Single(o => o.Key == "used_memory").Value;
 
-            Console.WriteLine($"Memory used with long names: {mem:0,000}");
+            Console.WriteLine($"Memory used with long names: {mem}");
             server.FlushAllDatabases();
 
             var createTasks2 = Enumerable.Range(1, 100000).Select(o =>Store.CreateAsync<IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute>()).ToArray();
@@ -550,7 +550,7 @@ namespace Rol.Tests
 
             var mem2 = server.Info("memory")[0].Single(o => o.Key == "used_memory").Value;
 
-            Console.WriteLine($"Memory used with short names: {mem2:0,000}");
+            Console.WriteLine($"Memory used with short names: {mem2}");
 
             Assert.Less(mem2, mem);
         }

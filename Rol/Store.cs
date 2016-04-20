@@ -26,7 +26,7 @@ namespace Rol
 
             il.LoadField(values);
             il.LoadArgument(0);
-            il.Call(TypeModel<T>.Model.IdDeclaringInterface.GetMethod("get_Id"));
+            il.Call(TypeModel<T>.Model.RequestedType.GetMethod("get_Id"));
 
             if (TypeModel<T>.Model.IdType.IsValueType)
             {
@@ -239,9 +239,8 @@ namespace Rol
             var idProperty = Model.Properties.SingleOrDefault(o => o.Name == "Id");
 
             Model.HasIdProperty = idProperty != null;
-            Model.IdDeclaringInterface = idProperty?.DeclaringType;
             Model.IdType = idProperty?.Type;
-            Model.NameToUseInRedis = Model.IdDeclaringInterface?.GetCustomAttribute<RolNameAttribute>()?.Name ?? Model.RequestedType.Name;
+            Model.NameToUseInRedis = Model.RequestedType.GetCustomAttribute<RolNameAttribute>()?.Name ?? Model.RequestedType.Name;
         }
 
         static Type ImplementType()
@@ -307,7 +306,6 @@ namespace Rol
         public bool HasIdProperty;
         public Type[] AllInterfaces;
         public PropertyModel[] Properties;
-        public Type IdDeclaringInterface;
         public Type IdType;
         public FieldInfo IdField;
         public FieldInfo StoreField;
@@ -504,9 +502,9 @@ namespace Rol
             {
                 var typeModel = TypeModel<T>.Model;
 
-                il.LoadConstant($"/{typeModel.IdDeclaringInterface.Name}/{{0}}");
+                il.LoadConstant($"/{typeModel.RequestedType.Name}/{{0}}");
                 il.LoadArgument(0);
-                il.CallVirtual(typeModel.IdDeclaringInterface.GetProperty("Id").GetGetMethod());
+                il.CallVirtual(typeModel.RequestedType.GetProperty("Id").GetGetMethod());
 
                 if (typeModel.IdType.IsValueType)
                 {
