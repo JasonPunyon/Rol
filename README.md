@@ -24,6 +24,7 @@ public interface IQuestion
     int Id { get; }
     string Title { get; set; }
     string Body { get; set; }
+    int Score { get; set; }
 }
 ```
 
@@ -33,30 +34,7 @@ public interface IQuestion
 2. The properties on that concrete type read and write data from redis using StackExchange.Redis. They calculate where data belongs in redis based on the interface type (IQuestion), the Id of the particular instance you're working with, and the name of the property.
 3. Rol lazily implements all the functions the Store needs to work with the data.
 
-To create a question we go to the Store...
-
-```c#
-var question = store.Create<IQuestion>(); //returns an IQuestion
-```
-
-And to store the data in redis, you just set the properties...
-
-```c#
-question.Title = "How do I X?";
-question.Body = "I'm really interested in how to do X. I've tried Y and Z but they don't seem to be X. How do I do X?"
-```
-
-And you're done. The data's in redis. If you want to read back the data from redis...just read the properties of the object...
-
-```c#
-Console.WriteLine($"Question Id: {question.Id}");
-Console.WriteLine($"Question Title: {question.Title}");
-Console.WriteLine($"Question.Body: {question.Body}");
-```
-
-###Ids
-
-Objects in the store are accessed by Id, so your interface must have a get-only Id property. Ids can be `int`s, `string`s, or `Guid`s.
+**Note To The Reader:** Rol doesn't require you to do anything other than provide this interface. You do not have to write any concrete types that implement the interface or any other boilerplate. This is one of Rol's defining features. Embrace it.
 
 ##The Store
 
@@ -67,82 +45,22 @@ var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
 var store = new Rol.Store(connection);
 ```
 
-##Store.Create\<T>()
-
-`Store.Create<T>()` takes an optional `id` argument so you can create objects by Id...
-
-```c#
-[Test]
-public void InterfaceWithIntKeyCanBeCreated()
-{
-    var withIntId = Store.Create<IQuestion>(3);
-    Assert.AreEqual(3, withIntId.Id);
-}
-```
-
-If your interface's Id is an integer you can also omit the id argument, and Rol will work like a database table with an auto-incrementing primary key.
-
-```c#
-[Test]
-public void CreatedIntegerIdsIncrease()
-{
-    var first = Store.Create<IQuestion>();
-    var second = Store.Create<IQuestion>();
-    var third = Store.Create<IQuestion>();            
-
-    Assert.AreEqual(1, first.Id);
-    Assert.AreEqual(2, second.Id);
-    Assert.AreEqual(3, third.Id);
-}
-```
-
-To be honest, right now the Create method isn't that useful for interface with Id types other than int. You'll want to use Store.Get<T>()
-
-##Store.CreateAsync\<T>()
-Does the same thing as `Store.Create<T>()`, but asynchronously.
-
-##Store.Enumerate\<T>()
-
-If you've got integer ids and you're letting Rol handle the creation of those Ids, you can use `Store.Enumerate<T>()` to walk through those objects in Id order. Again, it's trying to work like a database table with an auto-incrementing primary key.
-
-```c#
-[Test]
-public void CreatedIntegerIdsIncrease()
-{
-    var first = Store.Create<IQuestion>();
-    var second = Store.Create<IQuestion>();
-    var third = Store.Create<IQuestion>();       
-
-    var questions = Store.Enumerate<IQuestion>().ToList();
-
-    Assert.IsTrue(questions.Select(o => o.Id).SequenceEqual(new[] { 1, 2, 3 }));
-    Assert.AreEqual(3, questions.Count);
-}
-```
-
 ##Store.Get\<T>()
+Rol requires very little ceremony to start working with your data. If you already have the Id for an object you'd like to work with, just `.Get` that Id...
 
-Looks just like the create method but requires the id argument (Rol has to know what id you want to get).
+Note that this kind of behavior is different than what you might expect in an ORM. Creating objects isn't necessary, you just ask Rol for what you want and Rol gives it to you.
 
 ```c#
 [Test]
-public void InterfaceWithStringKeyCanGetGot()
+public void GetQuestionFromStore()
 {
-    var withStringId = Store.Get<IWithStringId>("Hello");
-    Assert.AreEqual("Hello", withStringId.Id);
-}
-
-[Test]
-public void InterfaceWithGuidKeyCanGetGot()
-{
-    var id = Guid.NewGuid();
-    var withGuidId = Store.Get<IWithGuidId>(id);
-    Assert.AreEqual(id, withGuidId.Id);
+    var question = Store.Get<IQuestion>(42);
+    Assert.AreEqual(42, question.Id); //The object has the id you provided.
+    Assert.AreEqual(null, question.Title); //The object's properties have the default values for their types.
+    Assert.AreEqual(null, question.Body);
+    Assert.AreEqual(0, question.Score);
 }
 ```
-##Store.GetAsync\<T>()
-
-Does the same thing as `Store.Get<T>()`, but asynchronously.
 
 ## What kinds of properties can I use in my interfaces?
 
