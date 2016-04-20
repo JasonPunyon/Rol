@@ -80,8 +80,8 @@ namespace Rol.Tests
         [Test]
         public void InterfaceWithIntKeyCanBeCreated()
         {
-            var withIntId = Store.Create<IIntId>(3);
-            Assert.AreEqual(3, withIntId.Id);
+            var withIntId = Store.Create<IIntId>();
+            Assert.AreEqual(1, withIntId.Id);
         }
 
         [Test]

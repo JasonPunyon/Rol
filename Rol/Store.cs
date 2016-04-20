@@ -54,16 +54,11 @@ namespace Rol
             Connection = connection;
         }
 
-        public T Create<T>(object id = null)
+        public T Create<T>()
         {
-            if (id == null)
-            {
-                var result = Rol.Create<T>.Impl.Value(null, this);
-                Cache<T>.Add.Value(result);
-                return result;
-            }
-            
-            return Cache<T>.Values.GetOrAdd(id, i => Rol.Create<T>.Impl.Value(i, this));
+            var result = Rol.Create<T>.Impl.Value(null, this);
+            Cache<T>.Add.Value(result);
+            return result;
         }
 
         public Task<T> CreateAsync<T>(object id = null)
