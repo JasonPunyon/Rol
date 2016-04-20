@@ -16,6 +16,7 @@ namespace Rol
         bool Set(TKey key, TValue value, When when = When.Always);
         Task<bool> SetAsync(TKey key, TValue value, When when = When.Always);
         bool Contains(TKey key);
+        Task<bool> ContainsAsync(TKey key);
         void Remove(TKey key);
         Task RemoveAsync(TKey key);
         Task<IEnumerable<KeyValuePair<TKey, TValue>>> GetAllAsync();
@@ -102,6 +103,11 @@ namespace Rol
         public bool Contains(TKey key)
         {
             return Store.Connection.GetDatabase().HashExists(_id, ToRedisValue<TKey>.Impl.Value(key));
+        }
+
+        public Task<bool> ContainsAsync(TKey key)
+        {
+            return Store.Connection.GetDatabase().HashExistsAsync(_id, ToRedisValue<TKey>.Impl.Value(key));
         }
 
         public void Remove(TKey key)
