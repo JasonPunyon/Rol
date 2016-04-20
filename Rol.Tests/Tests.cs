@@ -143,11 +143,25 @@ namespace Rol.Tests
             theSet.Add(theObject);
 
             Assert.True(theObject == theSet.First());
+        }
 
-            //Dictionaries work?
+        [Test]
+        public void DictionariesWork()
+        {
+            var theObject = Store.Get<ISomeInterface>(1);
+            var d = new Dictionary<ISomeInterface, ISomeInterface>();
+            d[theObject] = theObject;
+            Assert.AreEqual(theObject, d[theObject]);
+        }
+
+        [Test]
+        [ExpectedException]
+        public void DictionariesThrowOnMultipleAdd()
+        {
+            var theObject = Store.Get<ISomeInterface>(1);
             var d = new Dictionary<ISomeInterface, int>();
-            d[theObject] = 4;
-            Assert.True(d.ContainsKey(Store.Get<ISomeInterface>(1)));
+            d.Add(theObject, 1);
+            d.Add(theObject, 2);
         }
     }
 
