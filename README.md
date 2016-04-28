@@ -218,7 +218,7 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
 
 ###IRedisArray\<T>
 
-The `IRedisArray\<T>` provides an array-like (O(1) access by index) collection for fixed size elements.
+The `IRedisArray<T>` interface provides an array-like (O(1) access by index) collection for fixed size elements.
 
 `T` can be: `int`,`double`,`short`,`long`,`float`,`ushort`,`uint`,`ulong`,`char`, or your interface type with an integer Id.
 
