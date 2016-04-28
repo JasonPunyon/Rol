@@ -363,7 +363,7 @@ public interface IWantSomeMemorySavings
 
 By default Rol stores your interface types in Hashes, with property names as the fields, and property values as the values in the hash. This incurs a lot of overhead because we must repeat property names in every object's hash.
 
-Using the `[CompactStorage]` attribute on a property tells Rol to store values for that property for all instances of that interface in a single IRedisArray<T> indexed by Id. This eliminates the duplication of property names and saves scads of memory.
+Using the `[CompactStorage]` attribute on a fixed size property tells Rol to store values for that property for all instances of that interface in a single `IRedisArray<TProperty>` indexed by Id. This eliminates the duplication of property names and saves scads of memory.
 
 ##Equality
 
