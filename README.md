@@ -216,6 +216,61 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
 }
 ```
 
+###IRedisArray\<T>
+
+The `IRedisArray\<T>` provides an array-like (O(1) access by index) collection for fixed size elements.
+
+`T` can be: `int`,`double`,`short`,`long`,`float`,`ushort`,`uint`,`ulong`,`char`, or your interface type with an integer Id.
+
+```c#
+[Test]
+public void IntRedisArrayProperty()
+{
+    var withProps = Store.Get<IWithProperties>(1);
+    var val = new Random().Next();
+    
+    //Write a value to the integer array.
+    withProps.IntArray[1] = val;
+    
+    //Read a value from the integer array.
+    Assert.AreEqual(val, withProps.IntArray[1]);
+}
+```
+
+Notice that we never had to give the array dimension, it will automatically grow as necessary. The array is backed by 64K redis strings (that number plucked from the sky), so that's the maximum it will ever allocate in redis when writing a single element.
+
+###POCOs
+
+Because let's face it, sometimes a property is a few fields together. POCOs get JSON serialized. The thing to watch out for is that changes made to the POCO don't get sent back to redis, you have to reset the POCO property on your interface instance for it to be persisted.
+
+```c#
+public class Location
+{
+    public double Lon { get; set; }
+    public double Lat { get; set; }
+}
+
+public interface IUser
+{
+    int Id { get; }
+    string Name { get; set; }
+    int Reputation { get; set; }
+    Location Location { get; set; }
+}
+
+public static void WorkWithLocation(int userId, double lon, double lat)
+{
+    var user = Store.Get<IUser>(userId);
+    var location = new Location { Lon = lon, Lat = lat };
+    user.Location = location;
+    
+    location.Lon = 3.0; //Nothing written to redis.
+    Console.WriteLine(user.Location.Lon); //It'll be the value of lon.
+    user.Location = location; //The entire location object now gets serialized and persisted.
+    Console.WriteLine(user.Location.Lon); //3.0
+}
+```
+
 ###Async properties
 
 You can tap into Rol's async support by declaring your properties of type `Async<T>`. Async<T>'s are awaitable just like tasks, and they're convertible to Task<T>, and they're convertible from their underlying types. Let's say we wanted to access the Title data of our IQuestion asynchronously...
@@ -247,38 +302,6 @@ public async Task WorkWithTitle(int questionId)
     store.WaitAll(titleTasks.Values.ToArray()); //Wait for all the underlying tasks to complete.
     
     var titles = titleTasks.ToDictionary(o => o.Key, o => o.Value.Result);
-}
-```
-
-###POCOs
-
-Because let's face it, sometimes a property is a few fields together. POCOs get JSON serialized. The thing to watch out for is that changes made to the POCO don't get sent back to redis, you have to reset the POCO property on your interface instance for it to be persisted.
-
-```c#
-public class Location
-{
-    public double Lon { get; set; }
-    public double Lat { get; set; }
-}
-
-public interface IUser
-{
-    int Id { get; }
-    string Name { get; set; }
-    int Reputation { get; set; }
-    Location Location { get; set; }
-}
-
-public static void WorkWithLocation(int userId, double lon, double lat)
-{
-    var user = Store.Get<IUser>(userId);
-    var location = new Location { Lon = lon, Lat = lat };
-    user.Location = location;
-    
-    location.Lon = 3.0; //Nothing written to redis.
-    Console.WriteLine(user.Location.Lon); //It'll be the value of lon.
-    user.Location = location; //The entire location object now gets serialized and persisted.
-    Console.WriteLine(user.Location.Lon); //3.0
 }
 ```
 
@@ -322,6 +345,25 @@ public interface IStuff
 }
 ```
 ...Rol will faithfully follow you into oblivion, no questions asked.
+
+##CompactStorageAttribute
+
+If your interface type has an integer Id you can take advantage of massive memory savings (at the cost of lost readability of/interactibility with the keyspace by humans) on fixed size properties by marking them with the `[CompactStorage]` attribute.
+
+```c#
+public interface IWantSomeMemorySavings
+{
+    int Id { get; }
+    int RegularIntProperty { get; set; }
+    
+    [CompactStorage] 
+    int CompactIntProperty { get; set; }
+}
+```
+
+By default Rol stores your interface types in Hashes, with property names as the fields, and property values as the values in the hash. This incurs a lot of overhead because we must repeat property names in every object's hash.
+
+Using the `[CompactStorage]` attribute on a property tells Rol to store values for that property for all instances of that interface in a single IRedisArray<T> indexed by Id. This eliminates the duplication of property names and saves scads of memory.
 
 ##Equality
 
