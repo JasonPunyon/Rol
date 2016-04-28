@@ -10,4 +10,12 @@ namespace Rol
             Name = name;
         }
     }
+
+    public class CompactStorageAttribute : Attribute
+    {
+        public CompactStorageAttribute()
+        {
+
+        }
+    }
 }

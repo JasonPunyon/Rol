@@ -191,6 +191,11 @@ namespace Rol.Tests
             IRedisHyperLogLog<Guid> HyperLogLogOfGuids { get; set; }
             Async<int> IntPropAsync { get; set; }
             AnEnum AnEnumProperty { get; set; }
+            IRedisArray<int> IntArray { get; set; } 
+            IRedisArray<IReferenceWithProperties> RefArray { get; set; }
+
+            [CompactStorage]
+            int CompactInt { get; set; }
         }
 
         public enum AnEnum
@@ -457,6 +462,33 @@ namespace Rol.Tests
             withProps.AnEnumProperty = AnEnum.AnotherValue;
             Assert.AreEqual(AnEnum.AnotherValue, withProps.AnEnumProperty);
         }
+
+        [Test]
+        public void IntRedisArrayProperty()
+        {
+            var withProps = Store.Get<IWithProperties>(1);
+            withProps.IntArray[1] = 0;
+            Assert.AreEqual(0, withProps.IntArray[1]);
+        }
+
+        [Test]
+        public void RefRedisArrayProperty()
+        {
+            var withProps = Store.Get<IWithProperties>(1);
+            var theRef = Store.Get<IReferenceWithProperties>(34);
+
+            withProps.RefArray[0] = theRef;
+            Assert.AreEqual(theRef, withProps.RefArray[0]);
+        }
+
+        [Test]
+        public void CompactIntProperty()
+        {
+            var withProps = Store.Get<IWithProperties>(1);
+            var val = new Random().Next(10000);
+            withProps.CompactInt = val;
+            Assert.AreEqual(val, withProps.CompactInt);
+        }
     }
 
     [TestFixture]
@@ -517,6 +549,66 @@ namespace Rol.Tests
             }
             Console.WriteLine(hyperLogLog.Count());
         }
+
+        public interface IMemTest
+        {
+            int Id { get; }
+            int AnId { get; set; }
+        }
+
+        [Test]
+        public void NakedArray()
+        {
+            var intArray = Store.Get<IRedisArray<int>>((RedisKey)"/int-array");
+            var intVal = new Random().Next();
+            intArray[0] = intVal;
+            Assert.AreEqual(intVal, intArray[0]);
+
+            var uintArray = Store.Get<IRedisArray<uint>>((RedisKey) "/uint-array");
+            var uintVal = (uint) new Random().Next();
+            uintArray[0] = uintVal;
+            Assert.AreEqual(uintVal, uintArray[0]);
+
+            var shortArray = Store.Get<IRedisArray<short>>((RedisKey) "/short-array");
+            var shortVal = (short) new Random().Next(short.MaxValue);
+            shortArray[0] = shortVal;
+            Assert.AreEqual(shortVal, shortArray[0]);
+
+            var uShortArray = Store.Get<IRedisArray<ushort>>((RedisKey) "/ushort-array");
+            var ushortVal = (ushort) new Random().Next(ushort.MaxValue);
+            uShortArray[0] = ushortVal;
+            Assert.AreEqual(ushortVal, uShortArray[0]);
+
+            var longArray = Store.Get<IRedisArray<long>>((RedisKey) "/long-array");
+            var longVal = new Random().Next();
+            longArray[0] = longVal;
+            Assert.AreEqual(longVal, longArray[0]);
+
+            var ulongArray = Store.Get<IRedisArray<ulong>>((RedisKey) "/ulong-array");
+            var ulongVal = (ulong)new Random().Next();
+            ulongArray[0] = ulongVal;
+            Assert.AreEqual(ulongVal, ulongArray[0]);
+
+            var floatArray = Store.Get<IRedisArray<float>>((RedisKey) "/float-array");
+            var floatVal = (float) new Random().NextDouble();
+            floatArray[0] = floatVal;
+            Assert.AreEqual(floatVal, floatArray[0]);
+
+            var doubleArray = Store.Get<IRedisArray<double>>((RedisKey) "/double-array");
+            var doubleVal = new Random().NextDouble();
+            doubleArray[0] = doubleVal;
+            Assert.AreEqual(doubleVal, doubleArray[0]);
+
+            var charArray = Store.Get<IRedisArray<char>>((RedisKey) "/char-array");
+            char charVal = '☃';
+            charArray[0] = charVal;
+            Assert.AreEqual(charVal, charArray[0]);
+
+            var memTestArray = Store.Get<IRedisArray<IMemTest>>((RedisKey) "/imemtest-array");
+            var memTestVal = Store.Get<IMemTest>(1);
+            memTestArray[0] = memTestVal;
+            Assert.AreEqual(memTestArray[0], memTestVal);
+        }
     }
 
     [TestFixture]
@@ -549,7 +641,7 @@ namespace Rol.Tests
 
             var server = Store.Connection.GetServer(Store.Connection.GetEndPoints()[0]);
 
-            var mem = server.Info("memory")[0].Single(o => o.Key == "used_memory").Value;
+            var mem = int.Parse(server.Info("memory")[0].Single(o => o.Key == "used_memory").Value);
 
             Console.WriteLine($"Memory used with long names: {mem}");
             server.FlushAllDatabases();
@@ -562,11 +654,71 @@ namespace Rol.Tests
 
             Thread.Sleep(10000);
 
-            var mem2 = server.Info("memory")[0].Single(o => o.Key == "used_memory").Value;
+            var mem2 = int.Parse(server.Info("memory")[0].Single(o => o.Key == "used_memory").Value);
 
             Console.WriteLine($"Memory used with short names: {mem2}");
 
             Assert.Less(mem2, mem);
+        }
+    }
+
+    [TestFixture]
+    public class CompactStorage : RolFixture
+    {
+        public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameSparse
+        {
+            int Id { get; }
+            Async<int> IntPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute { get; set; }
+        }
+
+        public interface IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameCompact
+        {
+            int Id { get; }
+            [CompactStorage] Async<int> IntPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute { get; set; }
+        }
+
+        [Test]
+        public void TestMemorySavings()
+        {
+            var createTasks = Enumerable.Range(1, 100000).Select(o => Store.CreateAsync<IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameSparse>()).ToArray();
+            Store.WaitAll(createTasks);
+
+            var setTasks = createTasks.Select(o => o.Result).Select(o => o.IntPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute = 3456).ToArray();
+            Store.WaitAll(setTasks);
+
+            Thread.Sleep(10000);
+
+            var server = Store.Connection.GetServer(Store.Connection.GetEndPoints()[0]);
+
+            var mem = int.Parse(server.Info("memory")[0].Single(o => o.Key == "used_memory").Value);
+
+            Console.WriteLine($"Memory used with long names: {mem}");
+            server.FlushAllDatabases();
+
+            var createTasks2 = Enumerable.Range(1, 100000).Select(o => Store.CreateAsync<IInterfaceThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameCompact>()).ToArray();
+            Store.WaitAll(createTasks2);
+
+            var setTasks2 = createTasks2.Select(o => o.Result).Select(o => o.IntPropertyThatIsOverlyDescribedByItsReallyRidiculouslyOverlyVerboseAndLongAndRedundantNameButHasANameMapAttribute = 3456).ToArray();
+            Store.WaitAll(setTasks2);
+
+            Thread.Sleep(10000);
+
+            var mem2 = int.Parse(server.Info("memory")[0].Single(o => o.Key == "used_memory").Value);
+
+            Console.WriteLine($"Memory used with compact storage: {mem2}");
+
+            Assert.Less(mem2, mem);
+        }
+    }
+
+    [TestFixture]
+    public class RedisArray : RolFixture
+    {
+        [Test]
+        public void PageTest()
+        {
+            var arr = Store.Get<IRedisArray<int>>((RedisKey) "somestuff");
+            Store.WaitAll(Enumerable.Range(1, 1000000).Select(o => arr.SetAsync(o, o)).ToArray());
         }
     }
 

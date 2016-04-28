@@ -54,6 +54,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Async.cs" />
+    <Compile Include="RedisArray.cs" />
     <Compile Include="RedisHash.cs" />
     <Compile Include="RedisHyperLogLog.cs" />
     <Compile Include="RedisList.cs" />

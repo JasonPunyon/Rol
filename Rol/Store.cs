@@ -228,7 +228,8 @@ namespace Rol
                     Type = o.PropertyType,
                     DeclaringType = o.DeclaringType,
                     DeclaringTypeModel = Model,
-                    NameToUseInRedis = o.GetCustomAttribute<RolNameAttribute>()?.Name ?? o.Name
+                    NameToUseInRedis = o.GetCustomAttribute<RolNameAttribute>()?.Name ?? o.Name,
+                    CompactStorage = o.GetCustomAttribute<CompactStorageAttribute>() != null,
                 }).ToArray();
 
             var idProperty = Model.Properties.SingleOrDefault(o => o.Name == "Id");
@@ -236,18 +237,31 @@ namespace Rol
             Model.HasIdProperty = idProperty != null;
             Model.IdType = idProperty?.Type;
             Model.NameToUseInRedis = Model.RequestedType.GetCustomAttribute<RolNameAttribute>()?.Name ?? Model.RequestedType.Name;
+
+            //Fixed Width
+            if (TypeModel.Widths.ContainsKey(Model.RequestedType))
+            {
+                Model.IsFixedWidth = true;
+                Model.FixedWidth = TypeModel.Widths[Model.RequestedType];
+            }
+            else if (Model.HasIdProperty && Model.IdType == typeof(int))
+            {
+                Model.IsFixedWidth = true;
+                Model.FixedWidth = TypeModel.Widths[Model.IdType];
+            }
         }
 
         static Type ImplementType()
         {
             if (Model.RequestedType.IsRedisSet() || Model.RequestedType.IsRedisHash() ||
-                Model.RequestedType.IsRedisList() || Model.RequestedType.IsRedisSortedSet() || Model.RequestedType.IsRedisHyperLogLog())
+                Model.RequestedType.IsRedisList() || Model.RequestedType.IsRedisSortedSet() || Model.RequestedType.IsRedisHyperLogLog() || Model.RequestedType.IsRedisArray())
             {
                 var res = (Model.RequestedType.IsRedisSet() ? typeof (RedisSet<>)
                             : Model.RequestedType.IsRedisHash() ? typeof (RedisHash<,>)
                             : Model.RequestedType.IsRedisList() ? typeof (RedisList<>)
                             : Model.RequestedType.IsRedisSortedSet() ? typeof (RedisSortedSet<>)
-                            : Model.RequestedType.IsRedisHyperLogLog() ? typeof(RedisHyperLogLog<>) : null)
+                            : Model.RequestedType.IsRedisHyperLogLog() ? typeof(RedisHyperLogLog<>) 
+                            : Model.RequestedType.IsRedisArray() ? typeof(RedisArray<>) : null)
                     .MakeGenericType(Model.RequestedType.GenericTypeArguments);
 
                 Model.IdField = res.GetField("_id");
@@ -306,6 +320,23 @@ namespace Rol
         public FieldInfo StoreField;
         public PropertyInfo IdProperty;
         public string NameToUseInRedis;
+
+        public bool IsFixedWidth;
+        public int FixedWidth;
+
+        public static Dictionary<Type, int> Widths = new Dictionary<Type, int>
+        {
+            [typeof(int)] = sizeof(int),
+            [typeof(uint)] = sizeof(uint),
+            [typeof(short)] = sizeof(short),
+            [typeof(ushort)] = sizeof(ushort),
+            [typeof(long)] = sizeof(long),
+            [typeof(ulong)] = sizeof(ulong),
+            [typeof(float)] = sizeof(float),
+            [typeof(double)] = sizeof(double),
+            [typeof(char)] = sizeof(char),
+            [typeof(DateTime)] = sizeof(long)
+        };
     }
 
     public class PropertyModel
@@ -315,6 +346,7 @@ namespace Rol
         public Type Type { get; set; }
         public Type DeclaringType { get; set; }
         public string NameToUseInRedis { get; set; }
+        public bool CompactStorage { get; set; }
 
         public static readonly MethodAttributes MethodAttributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.SpecialName | MethodAttributes.NewSlot | MethodAttributes.HideBySig;
 
@@ -333,7 +365,7 @@ namespace Rol
                 return;
             }
 
-            if (Type.IsRedisSet() || Type.IsRedisList() || Type.IsRedisHash() || Type.IsRedisSortedSet() || Type.IsRedisHyperLogLog())
+            if (Type.IsRedisSet() || Type.IsRedisList() || Type.IsRedisHash() || Type.IsRedisSortedSet() || Type.IsRedisHyperLogLog() || Type.IsRedisArray())
             {
                 var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
                 var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
@@ -343,6 +375,7 @@ namespace Rol
                     : Type.IsRedisHash() ? typeof (RedisHash<,>).MakeGenericType(Type.GenericTypeArguments) 
                     : Type.IsRedisSortedSet() ? typeof(RedisSortedSet<>).MakeGenericType(Type.GenericTypeArguments)
                     : Type.IsRedisHyperLogLog() ? typeof(RedisHyperLogLog<>).MakeGenericType(Type.GenericTypeArguments)
+                    : Type.IsRedisArray() ? typeof(RedisArray<>).MakeGenericType(Type.GenericTypeArguments)
                     : null;
 
                 getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}/{NameToUseInRedis}");
@@ -370,108 +403,173 @@ namespace Rol
             }
             else if (Type.IsAsync())
             {
-                var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
-                var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
-                var getMi = typeof (RedisOperations).GetMethod("GetAsyncProp").MakeGenericMethod(typeof (string), Type.GenericTypeArguments[0]);
-
-                getIl.LoadArgument(0);
-                getIl.LoadField(DeclaringTypeModel.StoreField);
-                getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
-                getIl.LoadArgument(0);
-                getIl.LoadField(DeclaringTypeModel.IdField);
-
-                if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                if (CompactStorage)
                 {
-                    getIl.Box(DeclaringTypeModel.IdField.FieldType);
+                    var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
+                    var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
+                    var getMi = typeof(RedisOperations).GetMethod("GetCompactPropAsync").MakeGenericMethod(Type.GenericTypeArguments[0]);
+
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.StoreField);
+
+                    getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis.Replace("Async", "")}");
+                    getIl.Call(MethodInfos.StringToRedisKey);
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.IdField);
+                    getIl.Call(getMi);
+                    getIl.Return();
+
+                    prop.SetGetMethod(getIl.CreateMethod());
+                    //Set
+                    var setMi = typeof(RedisOperations).GetMethod("SetCompactPropAsync").MakeGenericMethod(Type.GenericTypeArguments[0]);
+                    var setIl = Emit.BuildInstanceMethod(typeof(void), new[] { Type }, typeBuilder, $"set_{Name}", MethodAttributes);
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.StoreField);
+                    setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis.Replace("Async", "")}");
+                    setIl.Call(MethodInfos.StringToRedisKey);
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.IdField);
+                    setIl.LoadArgument(1);
+                    setIl.Call(setMi);
+                    setIl.Return();
+
+                    prop.SetSetMethod(setIl.CreateMethod());
                 }
-
-                getIl.Call(MethodInfos.StringFormat);
-                getIl.Call(MethodInfos.StringToRedisKey);
-                getIl.LoadConstant(NameToUseInRedis.Replace("Async", ""));
-                getIl.Call(getMi);
-                getIl.Return();
-
-                prop.SetGetMethod(getIl.CreateMethod());
-
-                var setMi = typeof (RedisOperations).GetMethod("SetAsyncProp").MakeGenericMethod(typeof (string), Type.GenericTypeArguments[0]);
-                var setIl = Emit.BuildInstanceMethod(typeof(void), new[] { Type }, typeBuilder, $"set_{Name}", MethodAttributes);
-
-                setIl.LoadArgument(0);
-                setIl.LoadField(DeclaringTypeModel.StoreField);
-                setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
-                setIl.LoadArgument(0);
-                setIl.LoadField(DeclaringTypeModel.IdField);
-
-                if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                else
                 {
-                    setIl.Box(DeclaringTypeModel.IdField.FieldType);
+                    var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
+                    var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
+                    var getMi = typeof(RedisOperations).GetMethod("GetAsyncProp").MakeGenericMethod(typeof(string), Type.GenericTypeArguments[0]);
+
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.StoreField);
+                    getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.IdField);
+
+                    if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                    {
+                        getIl.Box(DeclaringTypeModel.IdField.FieldType);
+                    }
+
+                    getIl.Call(MethodInfos.StringFormat);
+                    getIl.Call(MethodInfos.StringToRedisKey);
+                    getIl.LoadConstant(NameToUseInRedis.Replace("Async", ""));
+                    getIl.Call(getMi);
+                    getIl.Return();
+
+                    prop.SetGetMethod(getIl.CreateMethod());
+
+                    var setMi = typeof(RedisOperations).GetMethod("SetAsyncProp").MakeGenericMethod(typeof(string), Type.GenericTypeArguments[0]);
+                    var setIl = Emit.BuildInstanceMethod(typeof(void), new[] { Type }, typeBuilder, $"set_{Name}", MethodAttributes);
+
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.StoreField);
+                    setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.IdField);
+
+                    if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                    {
+                        setIl.Box(DeclaringTypeModel.IdField.FieldType);
+                    }
+
+                    setIl.Call(MethodInfos.StringFormat);
+                    setIl.Call(MethodInfos.StringToRedisKey);
+                    setIl.LoadConstant(NameToUseInRedis.Replace("Async", ""));
+                    setIl.LoadArgument(1);
+                    setIl.Call(setMi);
+                    setIl.Return();
+
+                    prop.SetSetMethod(setIl.CreateMethod());
                 }
-
-                setIl.Call(MethodInfos.StringFormat);
-                setIl.Call(MethodInfos.StringToRedisKey);
-                setIl.LoadConstant(NameToUseInRedis.Replace("Async", ""));
-                setIl.LoadArgument(1);
-                setIl.Call(setMi);
-                setIl.Return();
-
-                prop.SetSetMethod(setIl.CreateMethod());
             }
             else
             {
-                var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
-
-                var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
-
-                getIl.LoadArgument(0);
-                getIl.LoadField(DeclaringTypeModel.StoreField);
-
-                getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
-                getIl.LoadArgument(0);
-                getIl.LoadField(DeclaringTypeModel.IdField);
-
-                if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                if (CompactStorage)
                 {
-                    getIl.Box(DeclaringTypeModel.IdField.FieldType);
+                    var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
+                    var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
+
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.StoreField);
+                    getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis}");
+                    getIl.Call(MethodInfos.StringToRedisKey);
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.IdField);
+                    getIl.Call(typeof (RedisOperations).GetMethod("GetCompactProp").MakeGenericMethod(Type));
+                    getIl.Return();
+                    prop.SetGetMethod(getIl.CreateMethod());
+
+                    var setIl = Emit.BuildInstanceMethod(typeof(void), new [] { Type }, typeBuilder, $"set_{Name}", MethodAttributes);
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.StoreField);
+                    setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis}");
+                    setIl.Call(MethodInfos.StringToRedisKey);
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.IdField);
+                    setIl.LoadArgument(1);
+                    setIl.Call(typeof (RedisOperations).GetMethod("SetCompactProp").MakeGenericMethod(Type));
+                    setIl.Return();
+                    prop.SetSetMethod(setIl.CreateMethod());
                 }
-
-                getIl.Call(MethodInfos.StringFormat);
-                getIl.Call(MethodInfos.StringToRedisKey);
-
-                getIl.LoadConstant(NameToUseInRedis);
-
-                var mi = typeof (RedisOperations).GetMethod("GetHashValue").MakeGenericMethod(typeof (string), Type);
-                getIl.Call(mi);
-
-                getIl.Return();
-
-                prop.SetGetMethod(getIl.CreateMethod());
-
-                var setIl = Emit.BuildInstanceMethod(typeof (void), new [] { Type }, typeBuilder, $"set_{Name}", MethodAttributes);
-
-                setIl.LoadArgument(0);
-                setIl.LoadField(DeclaringTypeModel.StoreField);
-
-                setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
-                setIl.LoadArgument(0);
-                setIl.LoadField(DeclaringTypeModel.IdField);
-
-                if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                else
                 {
-                    setIl.Box(DeclaringTypeModel.IdField.FieldType);
-                }
+                    var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
 
-                setIl.Call(MethodInfos.StringFormat);
-                setIl.Call(MethodInfos.StringToRedisKey);
+                    var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
 
-                setIl.LoadConstant(NameToUseInRedis);
-                setIl.LoadArgument(1);
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.StoreField);
 
-                mi = typeof (RedisOperations).GetMethod("SetHashValue").MakeGenericMethod(typeof (string), Type);
+                    getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
+                    getIl.LoadArgument(0);
+                    getIl.LoadField(DeclaringTypeModel.IdField);
 
-                setIl.Call(mi);
-                setIl.Return();
+                    if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                    {
+                        getIl.Box(DeclaringTypeModel.IdField.FieldType);
+                    }
 
-                prop.SetSetMethod(setIl.CreateMethod());
+                    getIl.Call(MethodInfos.StringFormat);
+                    getIl.Call(MethodInfos.StringToRedisKey);
+
+                    getIl.LoadConstant(NameToUseInRedis);
+
+                    var mi = typeof(RedisOperations).GetMethod("GetHashValue").MakeGenericMethod(typeof(string), Type);
+                    getIl.Call(mi);
+
+                    getIl.Return();
+
+                    prop.SetGetMethod(getIl.CreateMethod());
+
+                    var setIl = Emit.BuildInstanceMethod(typeof(void), new[] { Type }, typeBuilder, $"set_{Name}", MethodAttributes);
+
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.StoreField);
+
+                    setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
+                    setIl.LoadArgument(0);
+                    setIl.LoadField(DeclaringTypeModel.IdField);
+
+                    if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                    {
+                        setIl.Box(DeclaringTypeModel.IdField.FieldType);
+                    }
+
+                    setIl.Call(MethodInfos.StringFormat);
+                    setIl.Call(MethodInfos.StringToRedisKey);
+
+                    setIl.LoadConstant(NameToUseInRedis);
+                    setIl.LoadArgument(1);
+
+                    mi = typeof(RedisOperations).GetMethod("SetHashValue").MakeGenericMethod(typeof(string), Type);
+
+                    setIl.Call(mi);
+                    setIl.Return();
+
+                    prop.SetSetMethod(setIl.CreateMethod());
+                }   
             }
         }
     }
@@ -745,12 +843,14 @@ namespace Rol
             return source.Contains(t);
         }
 
-        public static bool IsRedisSet(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (IRedisSet<>);
-        public static bool IsRedisList(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(IRedisList<>);
-        public static bool IsRedisHash(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (IRedisHash<,>);
-        public static bool IsRedisSortedSet(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (IRedisSortedSet<>);
+        public static bool HasGenericTypeDefinition(this Type t, Type genericTypeDefinition) => t.IsGenericType && t.GetGenericTypeDefinition() == genericTypeDefinition;
+        public static bool IsRedisSet(this Type t) => t.HasGenericTypeDefinition(typeof(IRedisSet<>));
+        public static bool IsRedisList(this Type t) => t.HasGenericTypeDefinition(typeof(IRedisList<>));
+        public static bool IsRedisHash(this Type t) => t.HasGenericTypeDefinition(typeof (IRedisHash<,>));
+        public static bool IsRedisSortedSet(this Type t) => t.HasGenericTypeDefinition(typeof (IRedisSortedSet<>));
 
-        public static bool IsRedisHyperLogLog(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (IRedisHyperLogLog<>);
+        public static bool IsRedisHyperLogLog(this Type t) => t.HasGenericTypeDefinition(typeof (IRedisHyperLogLog<>));
+        public static bool IsRedisArray(this Type t) => t.HasGenericTypeDefinition(typeof (IRedisArray<>));
         public static bool IsAsync(this Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof (Async<>);
     }
 
