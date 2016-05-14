@@ -467,8 +467,9 @@ namespace Rol.Tests
         public void IntRedisArrayProperty()
         {
             var withProps = Store.Get<IWithProperties>(1);
-            withProps.IntArray[1] = 0;
-            Assert.AreEqual(0, withProps.IntArray[1]);
+            var val = new Random().Next();
+            withProps.IntArray[1] = val;
+            Assert.AreEqual(val, withProps.IntArray[1]);
         }
 
         [Test]

@@ -107,7 +107,7 @@ namespace Rol
         public RedisKey Id => _id;
         public readonly Store Store;
 
-        private const int MaxOffset = (64 * 1024) - 1; //512MB Slabs
+        private const int MaxOffset = (64 * 1024) - 1; //64K Slabs, you want it small so the maximum allocation time in redis is low.
         private static int _elementsPerSlab = MaxOffset/TypeModel<T>.Model.FixedWidth;
 
         public RedisArray(RedisKey id, Store store)
