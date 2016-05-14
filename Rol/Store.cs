@@ -335,7 +335,8 @@ namespace Rol
             [typeof(float)] = sizeof(float),
             [typeof(double)] = sizeof(double),
             [typeof(char)] = sizeof(char),
-            [typeof(DateTime)] = sizeof(long)
+            [typeof(DateTime)] = sizeof(long),
+            [typeof(Guid)] = 16
         };
     }
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -23,6 +24,24 @@ namespace Rol
                 {
                     il.LoadArgument(0);
                     il.Call(bitConverterConversion);
+                    il.Return();
+                    return il.CreateDelegate();
+                }
+
+                if (typeof (T) == typeof(DateTime))
+                {
+                    il.LoadArgumentAddress(0);
+                    var dt = il.DeclareLocal(typeof (DateTime));
+                    il.Call(typeof (DateTime).GetMethod("ToBinary"));
+                    il.Call(typeof (BitConverter).GetMethod("GetBytes", new[] {typeof (long)}));
+                    il.Return();
+                    return il.CreateDelegate();
+                }
+
+                if (typeof (T) == typeof (Guid))
+                {
+                    il.LoadArgumentAddress(0);
+                    il.Call(typeof (Guid).GetMethod("ToByteArray"));
                     il.Return();
                     return il.CreateDelegate();
                 }
@@ -68,6 +87,26 @@ namespace Rol
                     il.LoadArgument(0);
                     il.LoadConstant(0);
                     il.Call(BitConverterConversions[typeof(T)]);
+                    il.Return();
+                    return il.CreateDelegate();
+                }
+
+                if (typeof (T) == typeof (DateTime))
+                {
+                    var il = Emit<Func<byte[], Store, T>>.NewDynamicMethod();
+                    il.LoadArgument(0);
+                    il.LoadConstant(0);
+                    il.Call(BitConverterConversions[typeof (long)]);
+                    il.Call(typeof (DateTime).GetMethod("FromBinary"));
+                    il.Return();
+                    return il.CreateDelegate();
+                }
+
+                if (typeof (T) == typeof (Guid))
+                {
+                    var il = Emit<Func<byte[], Store, T>>.NewDynamicMethod();
+                    il.LoadArgument(0);
+                    il.NewObject(typeof (Guid), typeof (byte[]));
                     il.Return();
                     return il.CreateDelegate();
                 }

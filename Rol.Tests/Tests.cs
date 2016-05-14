@@ -608,7 +608,17 @@ namespace Rol.Tests
             var memTestArray = Store.Get<IRedisArray<IMemTest>>((RedisKey) "/imemtest-array");
             var memTestVal = Store.Get<IMemTest>(1);
             memTestArray[0] = memTestVal;
-            Assert.AreEqual(memTestArray[0], memTestVal);
+            Assert.AreEqual(memTestVal, memTestArray[0]);
+
+            var dateTimeArray = Store.Get<IRedisArray<DateTime>>((RedisKey) "/datetime-array");
+            var dateTimeVal = DateTime.UtcNow.AddDays(new Random().Next(0, 1000));
+            dateTimeArray[0] = dateTimeVal;
+            Assert.AreEqual(dateTimeVal, dateTimeArray[0]);
+
+            var guidArray = Store.Get<IRedisArray<Guid>>((RedisKey) "/guid-array");
+            var guidVal = Guid.NewGuid();
+            guidArray[0] = guidVal;
+            Assert.AreEqual(guidVal, guidArray[0]);
         }
     }
 
