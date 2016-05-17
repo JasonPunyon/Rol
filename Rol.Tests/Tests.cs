@@ -734,6 +734,35 @@ namespace Rol.Tests
     }
 
     [TestFixture]
+    public class Expiration : RolFixture
+    {
+        public interface IExpires
+        {
+            int Id { get; }
+            RedisTTL TTL { get; }
+            string Hello { get; set; }
+        }
+
+        [Test]
+        public void ExpirationTests()
+        {
+            var expires = Store.Get<IExpires>(1);
+            expires.Hello = "World";
+
+            Assert.IsNull(expires.TTL.Get());
+            Assert.IsNotNull(expires.Hello);
+
+            expires.TTL.Set(DateTime.UtcNow);
+            Assert.IsNull(expires.TTL.Get());
+            Assert.IsNull(expires.Hello);
+
+            expires.Hello = "World";
+            expires.TTL.Set(DateTime.UtcNow.Date.AddDays(1));
+            Assert.IsNotNull(expires.TTL.Get());
+        }
+    }
+
+    [TestFixture]
     public class README : RolFixture
     {
         public interface IQuestion

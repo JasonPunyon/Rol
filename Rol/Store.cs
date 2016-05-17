@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -272,7 +273,7 @@ namespace Rol
                 return res;
             }
 
-            var _tb = Assembly.mb.DefineType($"Rol.{Model.RequestedType.Name}", TypeAttributes.Public);
+            var _tb = Assembly.mb.DefineType($"Rol.{Model.RequestedType}", TypeAttributes.Public);
             foreach (var iface in Model.AllInterfaces)
             {
                 _tb.AddInterfaceImplementation(iface);
@@ -285,6 +286,10 @@ namespace Rol
             {
                 property.ImplementProperty(_tb);
             }
+
+            //Expire,ExpireAt
+            //TTL,PTTL
+
 
             var result = _tb.CreateType();
 
@@ -366,7 +371,32 @@ namespace Rol
                 return;
             }
 
-            if (Type.IsRedisSet() || Type.IsRedisList() || Type.IsRedisHash() || Type.IsRedisSortedSet() || Type.IsRedisHyperLogLog() || Type.IsRedisArray())
+            if (Type == typeof (RedisTTL))
+            {
+                var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
+                var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);
+
+                getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{{0}}");
+                getIl.LoadArgument(0);
+                getIl.LoadField(DeclaringTypeModel.IdField);
+
+                if (DeclaringTypeModel.IdField.FieldType.IsValueType)
+                {
+                    getIl.Box(DeclaringTypeModel.IdField.FieldType);
+                }
+
+                getIl.Call(MethodInfos.StringFormat);
+                getIl.Call(MethodInfos.StringToRedisKey);
+                getIl.LoadArgument(0);
+                getIl.LoadField(DeclaringTypeModel.StoreField);
+
+                getIl.NewObject(typeof (RedisTTL), typeof (RedisKey), typeof (Store));
+                getIl.Return();
+
+                prop.SetGetMethod(getIl.CreateMethod());
+                return;
+            }
+            else if (Type.IsRedisSet() || Type.IsRedisList() || Type.IsRedisHash() || Type.IsRedisSortedSet() || Type.IsRedisHyperLogLog() || Type.IsRedisArray())
             {
                 var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
                 var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, $"get_{Name}", MethodAttributes);

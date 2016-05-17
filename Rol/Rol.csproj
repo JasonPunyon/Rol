@@ -64,6 +64,7 @@
     <Compile Include="RolNameAttribute.cs" />
     <Compile Include="Store.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="RedisTTL.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />

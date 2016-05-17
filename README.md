@@ -105,8 +105,6 @@ public void CreatedIntegerIdsIncrease()
 }
 ```
 
-
-
 ## What kinds of properties can I use in my interfaces?
 
 ###You can use your basic types...
@@ -220,7 +218,7 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
 
 The `IRedisArray<T>` interface provides an array-like (O(1) access by index) collection for fixed size elements.
 
-`T` can be: `int`,`double`,`short`,`long`,`float`,`ushort`,`uint`,`ulong`,`char`, or your interface type with an integer Id.
+`T` can be: `int`,`double`,`short`,`long`,`float`,`ushort`,`uint`,`ulong`,`char`,`DateTime`,`Guid` or your interface type with an integer Id.
 
 ```c#
 [Test]
