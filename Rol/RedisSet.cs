@@ -18,6 +18,8 @@ namespace Rol
         Task<bool> ContainsAsync(T value);
         void Remove(T value);
         Task RemoveAsync(T value);
+        void RemoveAll();
+        Task RemoveAllAsync();
         Task<IEnumerable<T>> GetAllAsync();
     }
 
@@ -88,6 +90,16 @@ namespace Rol
         public Task RemoveAsync(T value)
         {
             return Store.Connection.GetDatabase().SetRemoveAsync(Id, ToRedisValue<T>.Impl.Value(value));
+        }
+
+        public void RemoveAll()
+        {
+            Store.Connection.GetDatabase().KeyDelete(Id);
+        }
+
+        public Task RemoveAllAsync()
+        {
+            return Store.Connection.GetDatabase().KeyDeleteAsync(Id);
         }
 
         public async Task<IEnumerable<T>> GetAllAsync()

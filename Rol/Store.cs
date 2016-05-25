@@ -287,10 +287,6 @@ namespace Rol
                 property.ImplementProperty(_tb);
             }
 
-            //Expire,ExpireAt
-            //TTL,PTTL
-
-
             var result = _tb.CreateType();
 
             Model.StoreField = result.GetField("Store");
