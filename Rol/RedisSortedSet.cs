@@ -18,6 +18,10 @@ namespace Rol
         IEnumerable<KeyValuePair<TKey, double>> WithRanksBetweenIncludeScores(long min, long max);
         IEnumerable<TKey> WithRanksBetween(long min, long max);
         Task<bool> SetAsync(TKey key, double score);
+        void Remove(TKey key);
+        Task RemoveAsync(TKey key);
+        void RemoveAll();
+        Task RemoveAllAsync();
 
     }
 
@@ -101,6 +105,26 @@ namespace Rol
         public Task<bool> SetAsync(TKey key, double score)
         {
             return Store.Connection.GetDatabase().SortedSetAddAsync(_id, ToRedisValue<TKey>.Impl.Value(key), score);
+        }
+
+        public void Remove(TKey key)
+        {
+            Store.Connection.GetDatabase().SortedSetRemove(_id, ToRedisValue<TKey>.Impl.Value(key));
+        }
+
+        public Task RemoveAsync(TKey key)
+        {
+            return Store.Connection.GetDatabase().SortedSetRemoveAsync(_id, ToRedisValue<TKey>.Impl.Value(key));
+        }
+
+        public void RemoveAll()
+        {
+            Store.Connection.GetDatabase().KeyDelete(_id);
+        }
+
+        public Task RemoveAllAsync()
+        {
+            return Store.Connection.GetDatabase().KeyDeleteAsync(_id);
         }
     }
 }

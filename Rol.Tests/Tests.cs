@@ -783,6 +783,35 @@ namespace Rol.Tests
     }
 
     [TestFixture]
+    public class RedisSortedSet : RolFixture
+    {
+        [Test]
+        public async void Remove()
+        {
+            var sortedSet = Store.Get<IRedisSortedSet<int>>((RedisKey) "helloworld");
+            sortedSet[1] = 5;
+            sortedSet[2] = 6;
+            Assert.AreEqual(2, sortedSet.Count());
+            sortedSet.Remove(1);
+            Assert.AreEqual(1, sortedSet.Count());
+            await sortedSet.RemoveAsync(2);
+            Assert.AreEqual(0, sortedSet.Count());
+
+            sortedSet[1] = 5;
+            sortedSet[2] = 6;
+            Assert.AreEqual(2, sortedSet.Count());
+            sortedSet.RemoveAll();
+            Assert.AreEqual(0, sortedSet.Count());
+
+            sortedSet[1] = 5;
+            sortedSet[2] = 6;
+            Assert.AreEqual(2, sortedSet.Count());
+            await sortedSet.RemoveAllAsync();
+            Assert.AreEqual(0, sortedSet.Count());
+        }
+    }
+
+    [TestFixture]
     public class Expiration : RolFixture
     {
         public interface IExpires
