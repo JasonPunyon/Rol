@@ -755,6 +755,30 @@ namespace Rol.Tests
             Assert.AreEqual(4, set.Count);
             await set.RemoveAllAsync();
             Assert.AreEqual(0, set.Count);
+
+        }
+    }
+
+    [TestFixture]
+    public class RedisHash : RolFixture
+    {
+        [Test]
+        public async void RemoveAll()
+        {
+            var hash = Store.Get<IRedisHash<int, int>>((RedisKey) "Helloworld");
+            hash[3] = 4;
+            hash[4] = 5;
+            hash[5] = 6;
+            Assert.AreEqual(3, hash.Count());
+            hash.RemoveAll();
+            Assert.AreEqual(0, hash.Count());
+
+            hash[3] = 4;
+            hash[4] = 5;
+            hash[5] = 6;
+            Assert.AreEqual(3, hash.Count());
+            await hash.RemoveAllAsync();
+            Assert.AreEqual(0, hash.Count());
         }
     }
 
