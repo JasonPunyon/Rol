@@ -19,12 +19,16 @@ namespace Rol
         Task<T> TailAsync();
         void PushTail(T item);
         Task PushHeadAsync(T item);
+        Task PushHeadAsync(params T[] items);
         Task PushTailAsync(T item);
+        Task PushTailAsync(params T[] items);
         T PopHead();
         T PopTail();
         Task<T> PopHeadAsync();
         Task<T> PopTailAsync();
         Task<IEnumerable<T>> GetAllAsync();
+        void RemoveAll();
+        Task RemoveAllAsync();
     }
 
     class RedisList<T> : IRedisList<T>
@@ -87,9 +91,19 @@ namespace Rol
             return Store.Connection.GetDatabase().ListLeftPushAsync(_id, ToRedisValue<T>.Impl.Value(item));
         }
 
+        public Task PushHeadAsync(params T[] items)
+        {
+            return Store.Connection.GetDatabase().ListLeftPushAsync(_id, items.Select(o => ToRedisValue<T>.Impl.Value(o)).ToArray());
+        }
+
         public Task PushTailAsync(T item)
         {
             return Store.Connection.GetDatabase().ListRightPushAsync(_id, ToRedisValue<T>.Impl.Value(item));
+        }
+
+        public Task PushTailAsync(params T[] items)
+        {
+            return Store.Connection.GetDatabase().ListRightPushAsync(_id, items.Select(o => ToRedisValue<T>.Impl.Value(o)).ToArray());
         }
 
         public T PopHead()
@@ -114,6 +128,16 @@ namespace Rol
         public async Task<IEnumerable<T>> GetAllAsync()
         {
             return (await Store.Connection.GetDatabase().ListRangeAsync(_id)).Select(o => FromRedisValue<T>.Impl.Value(o, Store));
+        }
+
+        public void RemoveAll()
+        {
+            Store.Connection.GetDatabase().KeyDelete(_id);
+        }
+
+        public Task RemoveAllAsync()
+        {
+            return Store.Connection.GetDatabase().KeyDeleteAsync(_id);
         }
 
         public IEnumerator<T> GetEnumerator()

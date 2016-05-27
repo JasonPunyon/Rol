@@ -70,7 +70,12 @@ namespace Rol
 
         public Task<long> AddAsync(params T[] values)
         {
-            return Store.Connection.GetDatabase().SetAddAsync(Id, values.Select(ToRedisValue<T>.Impl.Value).ToArray());
+            if (values.Any())
+            {
+                return Store.Connection.GetDatabase().SetAddAsync(Id, values.Select(ToRedisValue<T>.Impl.Value).ToArray());
+            }
+
+            return Task.FromResult(0L);
         }
 
         public int Count => (int)Store.Connection.GetDatabase().SetLength(Id);

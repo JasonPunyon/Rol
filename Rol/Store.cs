@@ -851,7 +851,7 @@ namespace Rol
                 return il.CreateDelegate();
             }
 
-            return (v, s) => JSON.Deserialize<T>(v);
+            return (v, s) => v.IsNull ? default(T) : JSON.Deserialize<T>(v);
         }
     }
 

@@ -731,6 +731,34 @@ namespace Rol.Tests
             var arr = Store.Get<IRedisArray<int>>((RedisKey) "somestuff");
             Store.WaitAll(Enumerable.Range(1, 1000000).Select(o => arr.SetAsync(o, o)).ToArray());
         }
+
+        [Test]
+        public void GetRangeTest()
+        {
+            for (var i = 1; i < 100000; i += 1000)
+            {
+                var arr = Store.Get<IRedisArray<int>>((RedisKey)i.ToString());
+                var data = Enumerable.Range(0, i).ToArray();
+
+                arr.Set(data);
+                var retrieved = arr.Get(0, i-1);
+                Assert.True(data.SequenceEqual(retrieved));
+            }
+        }
+
+        [Test]
+        public async Task GetRangeTestAsync()
+        {
+            for (var i = 1; i < 100000; i += 1000)
+            {
+                var arr = Store.Get<IRedisArray<int>>((RedisKey)i.ToString());
+                var data = Enumerable.Range(0, i).ToArray();
+
+                await arr.SetAsync(data);
+                var retrieved = await arr.GetAsync(0, i - 1);
+                Assert.True(data.SequenceEqual(retrieved));
+            }
+        }
     }
 
     [TestFixture]

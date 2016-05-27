@@ -15,6 +15,7 @@ namespace Rol
         IEnumerable<KeyValuePair<TKey, double>> IncludeScores();
         IEnumerable<TKey> WithScoresBetween(double min, double max);
         long CountWithScoresBetween(double min, double max);
+        Task<long> CountWithScoresBetweenAsync(double min, double max);
         IEnumerable<KeyValuePair<TKey, double>> WithRanksBetweenIncludeScores(long min, long max);
         IEnumerable<TKey> WithRanksBetween(long min, long max);
         Task<bool> SetAsync(TKey key, double score);
