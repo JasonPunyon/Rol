@@ -30,7 +30,6 @@ namespace Rol
                 if (typeof (T) == typeof(DateTime))
                 {
                     il.LoadArgumentAddress(0);
-                    var dt = il.DeclareLocal(typeof (DateTime));
                     il.Call(typeof (DateTime).GetMethod("ToBinary"));
                     il.Call(typeof (BitConverter).GetMethod("GetBytes", new[] {typeof (long)}));
                     il.Return();
@@ -76,7 +75,6 @@ namespace Rol
             [typeof(ulong)] = typeof(BitConverter).GetMethod("ToUInt64"),
             [typeof(char)] = typeof(BitConverter).GetMethod("ToChar"),
         };
-
 
         private static Func<byte[], int, Store, T> ImplementOffset()
         {
