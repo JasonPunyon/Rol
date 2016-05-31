@@ -23,7 +23,7 @@ namespace Rol
         Task RemoveAsync(TKey key);
         void RemoveAll();
         Task RemoveAllAsync();
-
+        RedisTTL TTL { get; }
     }
 
     class RedisSortedSet<TKey> : IRedisSortedSet<TKey>
@@ -127,5 +127,7 @@ namespace Rol
         {
             return Store.Connection.GetDatabase().KeyDeleteAsync(_id);
         }
+
+        public RedisTTL TTL => new RedisTTL(_id, Store);
     }
 }

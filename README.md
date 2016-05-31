@@ -303,6 +303,37 @@ public async Task WorkWithTitle(int questionId)
 }
 ```
 
+###RedisTTL
+
+Adding a property of type `RedisTTL` allows you to expire your objects.
+
+```c#
+public interface IExpires
+{
+    int Id { get; }
+    RedisTTL TTL { get; }
+    string Hello { get; set; }
+}
+
+[Test]
+public void ExpirationTests()
+{
+    var expires = Store.Get<IExpires>(1);
+    expires.Hello = "World";
+
+    Assert.IsNull(expires.TTL.Get());
+    Assert.IsNotNull(expires.Hello);
+
+    expires.TTL.Set(DateTime.UtcNow);
+    Assert.IsNull(expires.TTL.Get());
+    Assert.IsNull(expires.Hello);
+
+    expires.Hello = "World";
+    expires.TTL.Set(DateTime.UtcNow.Date.AddDays(1));
+    Assert.IsNotNull(expires.TTL.Get());
+}
+```
+
 ##RolNameAttribute
 
 One problem with storing objects in hashes the way Rol does is the overhead of type and property names. To put it ridiculously...

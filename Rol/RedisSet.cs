@@ -21,6 +21,7 @@ namespace Rol
         void RemoveAll();
         Task RemoveAllAsync();
         Task<IEnumerable<T>> GetAllAsync();
+        RedisTTL TTL { get; }
     }
 
     class RedisSet<T> : IRedisSet<T>
@@ -111,5 +112,7 @@ namespace Rol
         {
             return (await Store.Connection.GetDatabase().SetMembersAsync(Id)).Select(o => FromRedisValue<T>.Impl.Value(o, Store));
         }
+
+        public RedisTTL TTL => new RedisTTL(_id, Store);
     }
 }

@@ -201,6 +201,7 @@ namespace Rol
         Task SetAsync(T[] values);
         T[] Get(int startIndex, int endIndex);
         T this[int index] { get; set; }
+        RedisTTL TTL { get; }
     }
 
     class RedisArray<T> : IRedisArray<T>
@@ -348,5 +349,7 @@ namespace Rol
             get { return Get(index); }
             set { Set(index, value); }
         }
+
+        public RedisTTL TTL => new RedisTTL(_id, Store);
     }
 }

@@ -22,6 +22,7 @@ namespace Rol
         Task<IEnumerable<KeyValuePair<TKey, TValue>>> GetAllAsync();
         void RemoveAll();
         Task RemoveAllAsync();
+        RedisTTL TTL { get; }
     }
 
     class RedisHash<TKey, TValue> :  IRedisHash<TKey, TValue>
@@ -140,5 +141,7 @@ namespace Rol
         {
             return Store.Connection.GetDatabase().KeyDeleteAsync(_id);
         }
+
+        public RedisTTL TTL => new RedisTTL(_id, Store);
     }
 }

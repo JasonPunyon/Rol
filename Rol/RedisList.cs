@@ -29,6 +29,7 @@ namespace Rol
         Task<IEnumerable<T>> GetAllAsync();
         void RemoveAll();
         Task RemoveAllAsync();
+        RedisTTL TTL { get; }
     }
 
     class RedisList<T> : IRedisList<T>
@@ -152,5 +153,7 @@ namespace Rol
         {
             return GetEnumerator();
         }
+
+        public RedisTTL TTL => new RedisTTL(_id, Store);
     }
 }

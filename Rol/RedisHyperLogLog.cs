@@ -10,6 +10,7 @@ namespace Rol
         bool Add(T element);
         long Count();
         void Merge(params IRedisHyperLogLog<T>[] otherHyperLogLogs);
+        RedisTTL TTL { get; }
     }
 
     internal class RedisHyperLogLog<T> : IRedisHyperLogLog<T>
@@ -55,5 +56,7 @@ namespace Rol
         {
             return Store.Connection.GetDatabase().HyperLogLogMergeAsync(_id, otherHyperLogLogs.Select(p => p.Id).ToArray());
         }
+
+        public RedisTTL TTL => new RedisTTL(_id, Store);
     }
 }
