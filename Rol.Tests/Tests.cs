@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ namespace Rol.Tests
         [TestFixtureSetUp]
         public void TestFixtureSetup()
         {
-            Connection = ConnectionMultiplexer.Connect("localhost:6379,allowAdmin=true,syncTimeout=100000");
+            Connection = ConnectionMultiplexer.Connect("localhost,allowAdmin=true,syncTimeout=100000");
             Store = new Store(Connection);
         }
 
@@ -759,6 +760,65 @@ namespace Rol.Tests
                 Assert.True(data.SequenceEqual(retrieved));
             }
         }
+
+        [Test]
+        public void TestPoco()
+        {
+            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey)"an-intclass-array");
+            var val = new IntClass
+            {
+                FirstInt = 1,
+                DateTime = DateTime.UtcNow,
+            };
+            arr.Set(0, val);
+            arr.Set(1, val);
+
+            var result = arr.Get(0, 1);
+
+
+            Assert.AreEqual(val.FirstInt, result.First().FirstInt);
+            Assert.AreEqual(val.DateTime, result.First().DateTime);
+        }
+
+        [Test]
+        public async Task TestALotOfPoco()
+        {
+            var val = new IntClass
+            {
+                DateTime = DateTime.UtcNow.Date,
+                FirstInt = 1,
+            };
+
+            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey)"an-intclass-array");
+
+            var sw = Stopwatch.StartNew();
+
+            var tasks = Enumerable.Range(0, 2).Select(o => arr.SetAsync(o, val));
+            await Task.WhenAll(tasks);
+
+            Console.WriteLine(sw.Elapsed);
+        }
+
+        [Test]
+        public async Task MorePocos()
+        {
+            var val = new IntClass {DateTime = DateTime.UtcNow, FirstInt = 1};
+
+            var r = new Random();
+            var rands = Enumerable.Range(1, 1000001).Select(o => r.Next(1, 10)).ToArray();
+
+            await Task.WhenAll(Enumerable.Range(1, 7000000).Select(o =>
+            {
+                var arr = Store.Get<IRedisArray<IntClass>>((RedisKey) $"ic-a{o}");
+                return arr.SetAsync(Enumerable.Repeat(val, 1).ToArray());
+            }));
+        }
+
+        public class IntClass
+        {
+            public int FirstInt { get; set; }
+            public DateTime DateTime { get; set; }
+        }
     }
 
     [TestFixture]
@@ -783,7 +843,6 @@ namespace Rol.Tests
             Assert.AreEqual(4, set.Count);
             await set.RemoveAllAsync();
             Assert.AreEqual(0, set.Count);
-
         }
     }
 

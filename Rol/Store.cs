@@ -245,10 +245,15 @@ namespace Rol
                 Model.IsFixedWidth = true;
                 Model.FixedWidth = TypeModel.Widths[Model.RequestedType];
             }
-            else if (Model.HasIdProperty && Model.IdType == typeof(int))
+            else if (Model.IsInterface && Model.HasIdProperty && Model.IdType == typeof(int))
             {
                 Model.IsFixedWidth = true;
                 Model.FixedWidth = TypeModel.Widths[Model.IdType];
+            }
+            else if (Model.Properties.All(o => TypeModel.Widths.ContainsKey(o.Type)))
+            {
+                Model.IsFixedWidth = true;
+                Model.FixedWidth = Model.Properties.Sum(o => TypeModel.Widths[o.Type]);
             }
         }
 
@@ -336,6 +341,8 @@ namespace Rol
             [typeof(float)] = sizeof(float),
             [typeof(double)] = sizeof(double),
             [typeof(char)] = sizeof(char),
+            [typeof(byte)] = sizeof(byte),
+            [typeof(bool)] = sizeof(byte),
             [typeof(DateTime)] = sizeof(long),
             [typeof(Guid)] = 16
         };

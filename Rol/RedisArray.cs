@@ -8,6 +8,161 @@ using StackExchange.Redis;
 
 namespace Rol
 {
+    public static class ReadFromArrayOffset<T>
+    {
+        public static Lazy<Func<byte[], int, T>> Impl = new Lazy<Func<byte[], int, T>>(Implement);
+
+        private static Func<byte[], int, T> Implement()
+        {
+            var il = Emit<Func<byte[], int, T>>.NewDynamicMethod();
+
+            if (typeof (T) == typeof (int))
+            {
+                il.LoadArgument(0);
+                il.LoadArgument(1);
+                il.Call(typeof (BitConverter).GetMethod("ToInt32"));
+            }
+            else if (typeof (T) == typeof (long))
+            {
+                il.LoadArgument(0);
+                il.LoadArgument(1);
+                il.Call(typeof (BitConverter).GetMethod("ToInt64"));
+            }
+            else if (typeof(T) == typeof(DateTime))
+            {
+                il.LoadArgument(0);
+                il.LoadArgument(1);
+                il.Call(typeof (BitConverter).GetMethod("ToInt64"));
+                il.Call(typeof (DateTime).GetMethod("FromBinary"));
+            }
+            else if (typeof (T) == typeof (byte))
+            {
+                il.LoadArgument(0);
+                il.LoadArgument(1);
+                il.LoadElement<byte>();
+            }
+            else if (typeof (T) == typeof (bool))
+            {
+                il.LoadArgument(0);
+                il.LoadArgument(1);
+                il.LoadElement<byte>();
+                il.LoadConstant(0);
+                il.UnsignedCompareGreaterThan();
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            il.Return();
+            return il.CreateDelegate();
+        }
+    }
+
+    public static class WriteToArrayOffset<T>
+    {
+        public static Lazy<Action<T, byte[], int>> Impl = new Lazy<Action<T, byte[], int>>(Implement);
+
+        private static Action<T, byte[], int> Implement()
+        {
+            var il = Emit<Action<T, byte[], int>>.NewDynamicMethod();
+            il.LoadArgument(0);
+            il.LoadArgument(1);
+            il.LoadArgument(2);
+
+            if (typeof (T) == typeof (int))
+            {
+                il.Call(typeof (WriteToArrayOffset<int>).GetMethod("WriteInt"));
+            }
+            else if (typeof (T) == typeof (long))
+            {
+                il.Call(typeof (WriteToArrayOffset<long>).GetMethod("WriteLong"));
+            }
+            else if (typeof (T) == typeof (DateTime))
+            {
+                il.Call(typeof (WriteToArrayOffset<DateTime>).GetMethod("WriteDateTime"));
+            }
+            else if (typeof (T) == typeof (byte))
+            {
+                il.Call(typeof (WriteToArrayOffset<byte>).GetMethod("WriteByte"));
+            }
+            else if (typeof (T) == typeof (bool))
+            {
+                il.Call(typeof (WriteToArrayOffset<bool>).GetMethod("WriteBool"));
+            }
+            else
+            {
+                throw new NotImplementedException();
+            }
+
+            il.Return();
+
+            return il.CreateDelegate();
+        }
+
+        public static unsafe void WriteInt(int value, byte[] buffer, int offset)
+        {
+            fixed (byte* pBuffer = buffer)
+            {
+                var ps = pBuffer + offset;
+
+                *ps = (byte) value;
+                ps++;
+                *ps = (byte) (value >> 8);
+                ps++;
+                *ps = (byte) (value >> 16);
+                ps++;
+                *ps = (byte)(value >> 24);
+            }
+        }
+
+        public static void WriteDateTime(DateTime value, byte[] buffer, int offset)
+        {
+            WriteLong(value.ToBinary(), buffer, offset);
+        }
+
+        public static unsafe void WriteLong(long value, byte[] buffer, int offset)
+        {
+            fixed (byte* pBuffer = buffer)
+            {
+                var ps = pBuffer + offset;
+                *ps = (byte) value;
+                ps++;
+                *ps = (byte) (value >> 8);
+                ps++;
+                *ps = (byte) (value >> 16);
+                ps++;
+                *ps = (byte) (value >> 24);
+                ps++;
+                *ps = (byte)(value >> 32);
+                ps++;
+                *ps = (byte)(value >> 40);
+                ps++;
+                *ps = (byte)(value >> 48);
+                ps++;
+                *ps = (byte)(value >> 56);
+            }
+        }
+
+        public static unsafe void WriteByte(byte value, byte[] buffer, int offset)
+        {
+            fixed (byte* pBuffer = buffer)
+            {
+                var ps = pBuffer + offset;
+                *ps = value;
+            }
+        }
+
+        public static unsafe void WriteBool(bool value, byte[] buffer, int offset)
+        {
+            fixed (byte* pBuffer = buffer)
+            {
+                var ps = pBuffer + offset;
+                *ps = (byte) (value ? 1 : 0);
+            }
+        }
+    }
+
     public static class ToFixedWidthBytes<T>
     {
         public static Lazy<Func<T, byte[]>> Impl = new Lazy<Func<T, byte[]>>(Implement);
@@ -18,7 +173,8 @@ namespace Rol
             {
                 var il = Emit<Func<T, byte[]>>.NewDynamicMethod();
                 var bitConverterConversion = typeof(BitConverter).GetMethods().SingleOrDefault(o => o.Name == "GetBytes" && o.GetParameters()[0].ParameterType == typeof(T));
-
+                
+                //Anything convertible via BitConverter
                 if (bitConverterConversion != null)
                 {
                     il.LoadArgument(0);
@@ -27,6 +183,7 @@ namespace Rol
                     return il.CreateDelegate();
                 }
 
+                //DateTime
                 if (typeof (T) == typeof(DateTime))
                 {
                     il.LoadArgumentAddress(0);
@@ -36,6 +193,7 @@ namespace Rol
                     return il.CreateDelegate();
                 }
 
+                //Guids
                 if (typeof (T) == typeof (Guid))
                 {
                     il.LoadArgumentAddress(0);
@@ -44,12 +202,48 @@ namespace Rol
                     return il.CreateDelegate();
                 }
 
+                //Interface types.
                 if (TypeModel<T>.Model.HasIdProperty && TypeModel<T>.Model.IdType == typeof (int))
                 {
                     il.LoadArgument(0);
                     il.Call(TypeModel<T>.Model.RequestedType.GetMethod("get_Id"));
                     il.Call(typeof (BitConverter).GetMethod("GetBytes", new[] {typeof (int)}));
                     il.Return();
+                    return il.CreateDelegate();
+                }
+
+                //Fixed Width Pocos
+                if (!TypeModel<T>.Model.IsInterface && !typeof(T).IsValueType)
+                {
+                    var result = il.DeclareLocal<byte[]>();
+                    il.LoadConstant(TypeModel<T>.Model.FixedWidth);
+                    il.NewArray<byte>();
+                    il.StoreLocal(result);
+
+                    var offset = 0;
+                    foreach (var property in typeof(T).GetProperties().OrderBy(o => o.Name))
+                    {
+                        var writer = typeof (WriteToArrayOffset<>).MakeGenericType(property.PropertyType);
+                        var lazy = writer.GetField("Impl");
+                        var value = lazy.FieldType.GetProperty("Value");
+                        var invoke = lazy.FieldType.GetGenericArguments().First().GetMethod("Invoke");
+
+                        il.LoadField(lazy);
+                        il.CallVirtual(value.GetGetMethod());
+
+                        il.LoadArgument(0);
+                        il.CallVirtual(property.GetGetMethod());
+
+                        il.LoadLocal(result);
+                        il.LoadConstant(offset);
+
+                        il.Call(invoke);
+                        offset += TypeModel.Widths[property.PropertyType];
+                    }
+
+                    il.LoadLocal(result);
+                    il.Return();
+
                     return il.CreateDelegate();
                 }
             }
@@ -129,6 +323,42 @@ namespace Rol
                     il.Return();
                     return il.CreateDelegate();
                 }
+
+                if (!TypeModel<T>.Model.IsInterface && !typeof(T).IsValueType)
+                {
+                    var il = Emit<Func<byte[], int, Store, T>>.NewDynamicMethod();
+                    var result = il.DeclareLocal<T>();
+
+                    il.NewObject<T>();
+                    il.StoreLocal(result);
+
+                    var offset = 0;
+                    foreach (var property in typeof(T).GetProperties().OrderBy(o => o.Name))
+                    {
+                        var reader = typeof(ReadFromArrayOffset<>).MakeGenericType(property.PropertyType);
+                        var lazy = reader.GetField("Impl");
+                        var value = lazy.FieldType.GetProperty("Value");
+                        var invoke = lazy.FieldType.GetGenericArguments().First().GetMethod("Invoke");
+
+                        il.LoadLocal(result);
+                        il.LoadField(lazy);
+                        il.CallVirtual(value.GetGetMethod());
+
+                        il.LoadArgument(0);
+                        il.LoadArgument(1);
+                        il.LoadConstant(offset);
+                        il.Add();
+
+                        il.Call(invoke);
+                        il.CallVirtual(property.GetSetMethod());
+                        offset += TypeModel.Widths[property.PropertyType];
+                    }
+
+                    il.LoadLocal(result);
+                    il.Return();
+
+                    return il.CreateDelegate();
+                }
             }
 
             throw new NotImplementedException();
@@ -181,6 +411,41 @@ namespace Rol
                     il.Return();
                     return il.CreateDelegate();
                 }
+
+                //Fixed Width Pocos
+                if (!TypeModel<T>.Model.IsInterface && !typeof (T).IsValueType)
+                {
+                    var il = Emit<Func<byte[], Store, T>>.NewDynamicMethod();
+                    var result = il.DeclareLocal<T>();
+
+                    il.NewObject<T>();
+                    il.StoreLocal(result);
+
+                    var offset = 0;
+                    foreach (var property in typeof (T).GetProperties().OrderBy(o => o.Name))
+                    {
+                        var reader = typeof (ReadFromArrayOffset<>).MakeGenericType(property.PropertyType);
+                        var lazy = reader.GetField("Impl");
+                        var value = lazy.FieldType.GetProperty("Value");
+                        var invoke = lazy.FieldType.GetGenericArguments().First().GetMethod("Invoke");
+
+                        il.LoadLocal(result);
+                        il.LoadField(lazy);
+                        il.CallVirtual(value.GetGetMethod());
+
+                        il.LoadArgument(0);
+                        il.LoadConstant(offset);
+
+                        il.Call(invoke);
+                        il.CallVirtual(property.GetSetMethod());
+                        offset += TypeModel.Widths[property.PropertyType];
+                    }
+
+                    il.LoadLocal(result);
+                    il.Return();
+
+                    return il.CreateDelegate();
+                }
             }
 
             throw new NotImplementedException();
@@ -223,7 +488,10 @@ namespace Rol
         {
             var slab = index/_elementsPerSlab;
             var slabElementIndex = index%_elementsPerSlab;
-            return FromFixedWidthBytes<T>.Impl.Value(Store.Connection.GetDatabase().StringGetRange(_id.Append($":{slab}"), slabElementIndex*TypeModel<T>.Model.FixedWidth, ((slabElementIndex + 1)*TypeModel<T>.Model.FixedWidth) - 1), Store);
+            var bytes = Store.Connection.GetDatabase()
+                .StringGetRange(_id.Append($":{slab}"), slabElementIndex*TypeModel<T>.Model.FixedWidth,
+                    ((slabElementIndex + 1)*TypeModel<T>.Model.FixedWidth) - 1);
+            return FromFixedWidthBytes<T>.Impl.Value(bytes, Store);
         }
 
         public Task<T> GetAsync(int index)
