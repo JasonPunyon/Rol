@@ -465,6 +465,10 @@ namespace Rol
         T[] Get(int startIndex, int endIndex);
         T this[int index] { get; set; }
         RedisTTL TTL { get; }
+        long Length { get; }
+        Task<long> LengthAsync { get; }
+        long Append(T val);
+        Task<long> AppendAsync(T val);
     }
 
     class RedisArray<T> : IRedisArray<T>
@@ -472,9 +476,6 @@ namespace Rol
         public RedisKey _id;
         public RedisKey Id => _id;
         public readonly Store Store;
-
-        private const int MaxOffset = (64 * 1024); //64K Slabs, you want it small so the maximum allocation time in redis is low.
-        private static int _elementsPerSlab = MaxOffset/TypeModel<T>.Model.FixedWidth;
 
         public RedisArray(RedisKey id, Store store)
         {
@@ -486,44 +487,31 @@ namespace Rol
 
         public T Get(int index)
         {
-            var slab = index/_elementsPerSlab;
-            var slabElementIndex = index%_elementsPerSlab;
             var bytes = Store.Connection.GetDatabase()
-                .StringGetRange(_id.Append($":{slab}"), slabElementIndex*TypeModel<T>.Model.FixedWidth,
-                    ((slabElementIndex + 1)*TypeModel<T>.Model.FixedWidth) - 1);
+                .StringGetRange(_id, index*TypeModel<T>.Model.FixedWidth,
+                    ((index + 1)*TypeModel<T>.Model.FixedWidth) - 1);
             return FromFixedWidthBytes<T>.Impl.Value(bytes, Store);
         }
 
         public Task<T> GetAsync(int index)
         {
-            var slab = index/_elementsPerSlab;
-            var slabElementIndex = index%_elementsPerSlab;
             return Store.Connection.GetDatabase()
-                .StringGetRangeAsync(_id.Append($":{slab}"), slabElementIndex*TypeModel<T>.Model.FixedWidth,(slabElementIndex + 1)*TypeModel<T>.Model.FixedWidth)
+                .StringGetRangeAsync(_id, index*TypeModel<T>.Model.FixedWidth,(index + 1)*TypeModel<T>.Model.FixedWidth)
                 .ContinueWith(o => FromFixedWidthBytes<T>.Impl.Value(o.Result, Store));
         }
 
         public T[] Get(int startIndex, int endIndex)
         {
-            var startSlab = startIndex / _elementsPerSlab;
-            var slabs = (endIndex / _elementsPerSlab) - startSlab + 1;
-
             var numberOfElements = endIndex - startIndex + 1;
             var result = new T[numberOfElements];
 
-            for (var i = startSlab; i < slabs; i++)
+            var getStart = startIndex * TypeModel<T>.Model.FixedWidth;
+            var getEnd = (endIndex + 1) * TypeModel<T>.Model.FixedWidth - 1;
+
+            var bytes = (byte[])Store.Connection.GetDatabase().StringGetRange(_id, getStart, getEnd);
+            for (var j = 0; j < bytes.Length / TypeModel<T>.Model.FixedWidth; j += 1)
             {
-                var slabStartIndex = i * _elementsPerSlab;
-                var slabEndIndex = (i + 1) * _elementsPerSlab;
-
-                var getStart = Math.Max(slabStartIndex, startIndex) * TypeModel<T>.Model.FixedWidth;
-                var getEnd = Math.Min(slabEndIndex, endIndex + 1) * TypeModel<T>.Model.FixedWidth - 1;
-
-                var bytes = (byte[])Store.Connection.GetDatabase().StringGetRange(_id.Append($":{i}"), getStart % 65536, getEnd % 65536);
-                for (var j = 0; j < bytes.Length / TypeModel<T>.Model.FixedWidth; j += 1)
-                {
-                    result[j + i * _elementsPerSlab] = FromFixedWidthBytes<T>.ImplOffset.Value(bytes, j * TypeModel<T>.Model.FixedWidth, Store);
-                }
+                result[j] = FromFixedWidthBytes<T>.ImplOffset.Value(bytes, j * TypeModel<T>.Model.FixedWidth, Store);
             }
 
             return result;
@@ -531,25 +519,16 @@ namespace Rol
 
         public async Task<T[]> GetAsync(int startIndex, int endIndex)
         {
-            var startSlab = startIndex / _elementsPerSlab;
-            var slabs = (endIndex / _elementsPerSlab) - startSlab + 1;
-
             var numberOfElements = endIndex - startIndex + 1;
             var result = new T[numberOfElements];
 
-            for (var i = startSlab; i < slabs; i++)
+            var getStart = startIndex * TypeModel<T>.Model.FixedWidth;
+            var getEnd = (endIndex + 1) * TypeModel<T>.Model.FixedWidth - 1;
+
+            var bytes = (byte[])(await Store.Connection.GetDatabase().StringGetRangeAsync(_id, getStart, getEnd));
+            for (var j = 0; j < bytes.Length / TypeModel<T>.Model.FixedWidth; j += 1)
             {
-                var slabStartIndex = i * _elementsPerSlab;
-                var slabEndIndex = (i + 1) * _elementsPerSlab;
-
-                var getStart = Math.Max(slabStartIndex, startIndex) * TypeModel<T>.Model.FixedWidth;
-                var getEnd = Math.Min(slabEndIndex, endIndex + 1) * TypeModel<T>.Model.FixedWidth - 1;
-
-                var bytes = (byte[])await Store.Connection.GetDatabase().StringGetRangeAsync(_id.Append($":{i}"), getStart % 65536, getEnd % 65536);
-                for (var j = 0; j < bytes.Length / TypeModel<T>.Model.FixedWidth; j += 1)
-                {
-                    result[j + i * _elementsPerSlab] = FromFixedWidthBytes<T>.ImplOffset.Value(bytes, j * TypeModel<T>.Model.FixedWidth, Store);
-                }
+                result[j] = FromFixedWidthBytes<T>.ImplOffset.Value(bytes, j * TypeModel<T>.Model.FixedWidth, Store);
             }
 
             return result;
@@ -557,57 +536,36 @@ namespace Rol
 
         public void Set(int index, T val)
         {
-            var slab = index / _elementsPerSlab;
-            var slabElementIndex = index % _elementsPerSlab;
-            Store.Connection.GetDatabase().StringSetRange(_id.Append($":{slab}"), slabElementIndex * TypeModel<T>.Model.FixedWidth, ToFixedWidthBytes<T>.Impl.Value(val));
+            Store.Connection.GetDatabase().StringSetRange(_id, index * TypeModel<T>.Model.FixedWidth, ToFixedWidthBytes<T>.Impl.Value(val));
         }
 
         public void Set(T[] values)
         {
-            var slabs = values.Length/_elementsPerSlab + 1;
+            var destination = new byte[(values.Length)*TypeModel<T>.Model.FixedWidth];
 
-            for (var i = 0; i < slabs; i++)
+            for (var v = 0; v < values.Length; v++)
             {
-                var startValueIndex = i*_elementsPerSlab;
-                var endValueIndex = startValueIndex + ((i == slabs - 1) ? (values.Length % _elementsPerSlab) : _elementsPerSlab);
-
-                var destination = new byte[(endValueIndex - startValueIndex)*TypeModel<T>.Model.FixedWidth];
-
-                for (var v = startValueIndex; v < endValueIndex; v++)
-                {
-                    Buffer.BlockCopy(ToFixedWidthBytes<T>.Impl.Value(values[v]), 0, destination, (v%_elementsPerSlab)*TypeModel<T>.Model.FixedWidth, TypeModel<T>.Model.FixedWidth);
-                }
-
-                Store.Connection.GetDatabase().StringSetRange(_id.Append($":{i}"), 0, destination);
+                Buffer.BlockCopy(ToFixedWidthBytes<T>.Impl.Value(values[v]), 0, destination, v*TypeModel<T>.Model.FixedWidth, TypeModel<T>.Model.FixedWidth);
             }
+
+            Store.Connection.GetDatabase().StringSetRange(_id, 0, destination);
         }
 
         public Task SetAsync(int index, T val)
         {
-            var slab = index / _elementsPerSlab;
-            var slabElementIndex = index % _elementsPerSlab;
-
-            return Store.Connection.GetDatabase().StringSetRangeAsync(_id.Append($":{slab}"), slabElementIndex * TypeModel<T>.Model.FixedWidth, ToFixedWidthBytes<T>.Impl.Value(val));
+            return Store.Connection.GetDatabase().StringSetRangeAsync(_id, index* TypeModel<T>.Model.FixedWidth, ToFixedWidthBytes<T>.Impl.Value(val));
         }
 
         public async Task SetAsync(T[] values)
         {
-            var slabs = values.Length / _elementsPerSlab + 1;
+            var destination = new byte[values.Length * TypeModel<T>.Model.FixedWidth];
 
-            for (var i = 0; i < slabs; i++)
+            for (var v = 0; v < values.Length; v++)
             {
-                var startValueIndex = i * _elementsPerSlab;
-                var endValueIndex = startValueIndex + ((i == slabs - 1) ? (values.Length % _elementsPerSlab) : _elementsPerSlab);
-
-                var destination = new byte[(endValueIndex - startValueIndex) * TypeModel<T>.Model.FixedWidth];
-
-                for (var v = startValueIndex; v < endValueIndex; v++)
-                {
-                    Buffer.BlockCopy(ToFixedWidthBytes<T>.Impl.Value(values[v]), 0, destination, (v % _elementsPerSlab) * TypeModel<T>.Model.FixedWidth, TypeModel<T>.Model.FixedWidth);
-                }
-
-                await Store.Connection.GetDatabase().StringSetRangeAsync(_id.Append($":{i}"), 0, destination);
+                Buffer.BlockCopy(ToFixedWidthBytes<T>.Impl.Value(values[v]), 0, destination, v * TypeModel<T>.Model.FixedWidth, TypeModel<T>.Model.FixedWidth);
             }
+
+            await Store.Connection.GetDatabase().StringSetRangeAsync(_id, 0, destination);
         }
 
         public T this[int index]
@@ -617,5 +575,19 @@ namespace Rol
         }
 
         public RedisTTL TTL => new RedisTTL(_id, Store);
+
+        public long Length => Store.Connection.GetDatabase()
+            .StringLength(_id) / TypeModel<T>.Model.FixedWidth;
+
+        public Task<long> LengthAsync => Store.Connection.GetDatabase()
+            .StringLengthAsync(_id)
+            .ContinueWith(o => o.Result / TypeModel<T>.Model.FixedWidth);
+
+        public long Append(T val) => Store.Connection.GetDatabase()
+            .StringAppend(_id, ToFixedWidthBytes<T>.Impl.Value(val)) / TypeModel<T>.Model.FixedWidth;
+
+        public Task<long> AppendAsync(T val) => Store.Connection.GetDatabase()
+            .StringAppendAsync(_id, ToFixedWidthBytes<T>.Impl.Value(val))
+            .ContinueWith(o => o.Result/TypeModel<T>.Model.FixedWidth);
     }
 }
