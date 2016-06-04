@@ -465,6 +465,10 @@ namespace Rol
         T[] Get(int startIndex, int endIndex);
         T this[int index] { get; set; }
         RedisTTL TTL { get; }
+        long Length { get; }
+        Task<long> LengthAsync { get; }
+        long Append(T val);
+        Task<long> AppendAsync(T val);
     }
 
     class RedisArray<T> : IRedisArray<T>
@@ -571,5 +575,19 @@ namespace Rol
         }
 
         public RedisTTL TTL => new RedisTTL(_id, Store);
+
+        public long Length => Store.Connection.GetDatabase()
+            .StringLength(_id) / TypeModel<T>.Model.FixedWidth;
+
+        public Task<long> LengthAsync => Store.Connection.GetDatabase()
+            .StringLengthAsync(_id)
+            .ContinueWith(o => o.Result / TypeModel<T>.Model.FixedWidth);
+
+        public long Append(T val) => Store.Connection.GetDatabase()
+            .StringAppend(_id, ToFixedWidthBytes<T>.Impl.Value(val)) / TypeModel<T>.Model.FixedWidth;
+
+        public Task<long> AppendAsync(T val) => Store.Connection.GetDatabase()
+            .StringAppendAsync(_id, ToFixedWidthBytes<T>.Impl.Value(val))
+            .ContinueWith(o => o.Result/TypeModel<T>.Model.FixedWidth);
     }
 }

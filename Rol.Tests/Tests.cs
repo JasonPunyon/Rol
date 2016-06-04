@@ -812,6 +812,26 @@ namespace Rol.Tests
             public int FirstInt { get; set; }
             public DateTime DateTime { get; set; }
         }
+
+        [Test]
+        public void Append()
+        {
+            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey) "Key");
+            arr.Append(new IntClass {DateTime = DateTime.UtcNow, FirstInt = 3});
+            Assert.AreEqual(1, arr.Length);
+            arr.Append(new IntClass { DateTime = DateTime.UtcNow, FirstInt = 4 });
+            Assert.AreEqual(2, arr.Length);
+        }
+
+        [Test]
+        public async Task AppendAsync()
+        {
+            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey) "Key");
+            await arr.AppendAsync(new IntClass() {DateTime = DateTime.UtcNow, FirstInt = 1});
+            Assert.AreEqual(1, await arr.LengthAsync);
+            await arr.AppendAsync(new IntClass() {DateTime = DateTime.UtcNow, FirstInt = 2});
+            Assert.AreEqual(2, await arr.LengthAsync);
+        }
     }
 
     [TestFixture]
