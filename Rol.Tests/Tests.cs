@@ -727,13 +727,6 @@ namespace Rol.Tests
     public class RedisArray : RolFixture
     {
         [Test]
-        public void PageTest()
-        {
-            var arr = Store.Get<IRedisArray<int>>((RedisKey) "somestuff");
-            Store.WaitAll(Enumerable.Range(1, 1000000).Select(o => arr.SetAsync(o, o)).ToArray());
-        }
-
-        [Test]
         public void GetRangeTest()
         {
             for (var i = 1; i < 100000; i += 1000)
