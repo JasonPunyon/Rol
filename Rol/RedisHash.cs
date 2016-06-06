@@ -14,7 +14,9 @@ namespace Rol
         Task<IEnumerable<TKey>> KeysAsync { get; }
         Task<TValue> GetAsync(TKey key);
         bool Set(TKey key, TValue value, When when = When.Always);
+        void Set(IEnumerable<KeyValuePair<TKey, TValue>> sets);
         Task<bool> SetAsync(TKey key, TValue value, When when = When.Always);
+        Task SetAsync(IEnumerable<KeyValuePair<TKey, TValue>> sets);
         bool Contains(TKey key);
         Task<bool> ContainsAsync(TKey key);
         void Remove(TKey key);
@@ -98,9 +100,19 @@ namespace Rol
             return Store.Connection.GetDatabase().HashSet(_id, ToRedisValue<TKey>.Impl.Value(key), ToRedisValue<TValue>.Impl.Value(value));
         }
 
+        public void Set(IEnumerable<KeyValuePair<TKey, TValue>> sets)
+        {
+            Store.Connection.GetDatabase().HashSet(_id, sets.Select(o => new HashEntry(ToRedisValue<TKey>.Impl.Value(o.Key), ToRedisValue<TValue>.Impl.Value(o.Value))).ToArray());
+        }
+
         public Task<bool> SetAsync(TKey key, TValue value, When when = When.Always)
         {
             return Store.Connection.GetDatabase().HashSetAsync(_id, ToRedisValue<TKey>.Impl.Value(key), ToRedisValue<TValue>.Impl.Value(value));
+        }
+
+        public Task SetAsync(IEnumerable<KeyValuePair<TKey, TValue>> sets)
+        {
+            return Store.Connection.GetDatabase().HashSetAsync(_id,sets.Select(o => new HashEntry(ToRedisValue<TKey>.Impl.Value(o.Key), ToRedisValue<TValue>.Impl.Value(o.Value))).ToArray());
         }
 
         public bool Contains(TKey key)

@@ -905,6 +905,25 @@ namespace Rol.Tests
             await hash.RemoveAllAsync();
             Assert.AreEqual(0, hash.Count());
         }
+
+        [Test]
+        public async void MultiSet()
+        {
+            var hash = Store.Get<IRedisHash<int, int>>((RedisKey) "helloworld");
+            hash.Set(Enumerable.Range(0, 100).ToDictionary(o => o, o => (int) Math.Pow(o, 2)));
+            for (var i = 0; i < 100; i++)
+            {
+                Assert.AreEqual((int) Math.Pow(i, 2), await hash.GetAsync(i));
+            }
+
+            hash.RemoveAll();
+
+            await hash.SetAsync(Enumerable.Range(0, 100).ToDictionary(o => o, o => (int) Math.Pow(o, 2)));
+            for (var i = 0; i < 100; i++)
+            {
+                Assert.AreEqual((int)Math.Pow(i, 2), await hash.GetAsync(i));
+            }
+        }
     }
 
     [TestFixture]
