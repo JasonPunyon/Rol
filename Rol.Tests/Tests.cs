@@ -832,6 +832,31 @@ namespace Rol.Tests
             await arr.AppendAsync(new IntClass() {DateTime = DateTime.UtcNow, FirstInt = 2});
             Assert.AreEqual(2, await arr.LengthAsync);
         }
+
+        public interface IInterfaceTypeProperty
+        {
+            int Id { get; }
+        }
+
+        public class PocoWithInterfaceTypeProperty
+        {
+            public DateTime Date { get; set; }
+            public IInterfaceTypeProperty InterfaceTypeProperty { get; set; }
+        }
+
+        [Test]
+        public void PocoWithInterfaceTypePropertyWorks()
+        {
+            var iprop = Store.Get<IInterfaceTypeProperty>(1);
+            var arr = Store.Get<IRedisArray<PocoWithInterfaceTypeProperty>>((RedisKey) "YouKnowIt");
+
+            var now = DateTime.UtcNow;
+
+            arr[0] = new PocoWithInterfaceTypeProperty {Date = now, InterfaceTypeProperty = iprop};
+            var readValue = arr[0];
+            Assert.AreEqual(now, readValue.Date);
+            Assert.AreEqual(iprop, readValue.InterfaceTypeProperty);
+        }
     }
 
     [TestFixture]

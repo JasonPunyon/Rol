@@ -10,11 +10,11 @@ namespace Rol
 {
     public static class ReadFromArrayOffset<T>
     {
-        public static Lazy<Func<byte[], int, T>> Impl = new Lazy<Func<byte[], int, T>>(Implement);
+        public static Lazy<Func<byte[], int, Store, T>> Impl = new Lazy<Func<byte[], int, Store, T>>(Implement);
 
-        private static Func<byte[], int, T> Implement()
+        private static Func<byte[], int, Store, T> Implement()
         {
-            var il = Emit<Func<byte[], int, T>>.NewDynamicMethod();
+            var il = Emit<Func<byte[], int, Store, T>>.NewDynamicMethod();
 
             if (typeof (T) == typeof (int))
             {
@@ -48,6 +48,36 @@ namespace Rol
                 il.LoadElement<byte>();
                 il.LoadConstant(0);
                 il.UnsignedCompareGreaterThan();
+            }
+            else if (TypeModel<T>.Model.IsInterface && TypeModel<T>.Model.IsFixedWidth)
+            {
+                var idType = TypeModel<T>.Model.IdType;
+
+                var rfao = typeof (ReadFromArrayOffset<>).MakeGenericType(idType);
+                var lazy = rfao.GetField("Impl");
+                var value = lazy.FieldType.GetProperty("Value");
+                var invoke = lazy.FieldType.GetGenericArguments().First().GetMethod("Invoke");
+
+                var thisIl = Emit<Func<byte[], int, Store, T>>.NewDynamicMethod();
+
+                thisIl.LoadArgument(2);
+                thisIl.LoadField(lazy);
+                thisIl.CallVirtual(value.GetGetMethod());
+
+                thisIl.LoadArgument(0);
+                thisIl.LoadArgument(1);
+                thisIl.LoadArgument(2);
+                thisIl.Call(invoke);
+
+                if (idType.IsValueType)
+                {
+                    thisIl.Box(idType);
+                }
+
+                var storeGet = typeof (Store).GetMethod("Get").MakeGenericMethod(typeof (T));
+                thisIl.Call(storeGet);
+                thisIl.Return();
+                return thisIl.CreateDelegate();
             }
             else
             {
@@ -89,6 +119,31 @@ namespace Rol
             else if (typeof (T) == typeof (bool))
             {
                 il.Call(typeof (WriteToArrayOffset<bool>).GetMethod("WriteBool"));
+            }
+            else if (TypeModel<T>.Model.IsInterface && TypeModel<T>.Model.IsFixedWidth)
+            {
+                var idType = TypeModel<T>.Model.IdType;
+
+                var wtao = typeof (WriteToArrayOffset<>).MakeGenericType(idType);
+                var lazy = wtao.GetField("Impl");
+                var value = lazy.FieldType.GetProperty("Value");
+                var invoke = lazy.FieldType.GetGenericArguments().First().GetMethod("Invoke");
+
+                var thisIl = Emit<Action<T, byte[], int>>.NewDynamicMethod();
+
+                var idPropGet = typeof(T).GetProperty("Id").GetGetMethod();
+
+                thisIl.LoadField(lazy);
+                thisIl.CallVirtual(value.GetGetMethod());
+
+                thisIl.LoadArgument(0);
+                thisIl.CallVirtual(idPropGet);
+                thisIl.LoadArgument(1);
+                thisIl.LoadArgument(2);
+
+                thisIl.Call(invoke);
+                thisIl.Return();
+                return thisIl.CreateDelegate();
             }
             else
             {
@@ -238,7 +293,7 @@ namespace Rol
                         il.LoadConstant(offset);
 
                         il.Call(invoke);
-                        offset += TypeModel.Widths[property.PropertyType];
+                        offset += TypeModel.Widths.ContainsKey(property.PropertyType) ? TypeModel.Widths[property.PropertyType] : 4;
                     }
 
                     il.LoadLocal(result);
@@ -324,6 +379,7 @@ namespace Rol
                     return il.CreateDelegate();
                 }
 
+                //Pocos
                 if (!TypeModel<T>.Model.IsInterface && !typeof(T).IsValueType)
                 {
                     var il = Emit<Func<byte[], int, Store, T>>.NewDynamicMethod();
@@ -345,9 +401,12 @@ namespace Rol
                         il.CallVirtual(value.GetGetMethod());
 
                         il.LoadArgument(0);
-                        il.LoadArgument(1);
                         il.LoadConstant(offset);
+                        il.LoadArgument(1);
+                        
                         il.Add();
+
+                        il.LoadArgument(2);
 
                         il.Call(invoke);
                         il.CallVirtual(property.GetSetMethod());
@@ -435,10 +494,12 @@ namespace Rol
 
                         il.LoadArgument(0);
                         il.LoadConstant(offset);
+                        il.LoadArgument(1);
+                        
 
                         il.Call(invoke);
                         il.CallVirtual(property.GetSetMethod());
-                        offset += TypeModel.Widths[property.PropertyType];
+                        offset += TypeModel.Widths.ContainsKey(property.PropertyType) ? TypeModel.Widths[property.PropertyType] : 4;
                     }
 
                     il.LoadLocal(result);
