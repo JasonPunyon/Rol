@@ -410,7 +410,7 @@ namespace Rol
 
                         il.Call(invoke);
                         il.CallVirtual(property.GetSetMethod());
-                        offset += TypeModel.Widths[property.PropertyType];
+                        offset += TypeModel.Widths.ContainsKey(property.PropertyType) ? TypeModel.Widths[property.PropertyType] : 4;
                     }
 
                     il.LoadLocal(result);
