@@ -235,7 +235,7 @@ public void IntRedisArrayProperty()
 }
 ```
 
-Notice that we never had to give the array dimension, it will automatically grow as necessary. The array is backed by 64K redis strings (that number plucked from the sky), so that's the maximum it will ever allocate in redis when writing a single element.
+Notice that we never had to give the array dimension, it will automatically grow as necessary up to 512MB in size.
 
 ###POCOs
 
