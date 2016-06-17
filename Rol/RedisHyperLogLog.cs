@@ -1,4 +1,5 @@
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using StackExchange.Redis;
 
@@ -8,8 +9,11 @@ namespace Rol
     {
         string Id { get; }
         bool Add(T element);
+        Task<bool> AddAsync(T element);
         long Count();
+        Task<long> CountAsync();
         void Merge(params IRedisHyperLogLog<T>[] otherHyperLogLogs);
+        Task MergeAsync(params IRedisHyperLogLog<T>[] otherHyperLogLogs);
         RedisTTL TTL { get; }
     }
 

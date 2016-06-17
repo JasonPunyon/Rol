@@ -956,14 +956,32 @@ namespace Rol.Tests
             Assert.True(new[] { 1, 2 }.SequenceEqual(set3.OrderBy(o => o)));
         }
 
-        //[Test]
-        //public void SetOfSets()
-        //{
-        //    //var setOfSetsOfInt = Store.Get<IRedisSet<IRedisSet<int>>>((RedisKey) "set-of-sets");
-        //    //var setOfInt = Store.Get<IRedisSet<int>>((RedisKey) "set-of-int");
+        [Test]
+        public void SetOfSets()
+        {
+            var setOfSetsOfInt = Store.Get<IRedisSet<IRedisSet<int>>>("set-of-sets");
+            var setOfInt = Store.Get<IRedisSet<int>>("set-of-int");
 
-        //    //setOfSetsOfInt.Add(setOfInt);
-        //}
+            setOfInt.Add(1, 2, 3, 4, 5, 6);
+
+            setOfSetsOfInt.Add(setOfInt);
+            Assert.True(setOfSetsOfInt.Contains(setOfInt));
+            Assert.True(setOfSetsOfInt.SelectMany(o => o).OrderBy(o => o).SequenceEqual(new[] {1, 2, 3, 4, 5, 6}));
+        }
+
+        [Test]
+        public void SetOfHashes()
+        {
+            var setOfHashes = Store.Get<IRedisSet<IRedisHash<int, int>>>("Yep");
+            var hash1 = Store.Get<IRedisHash<int, int>>("Hash1");
+            var hash2 = Store.Get<IRedisHash<int, int>>("Hash2");
+
+            setOfHashes.Add(hash1);
+            setOfHashes.Add(hash2);
+
+            Assert.True(setOfHashes.Contains(hash1));
+            Assert.True(setOfHashes.Contains(hash2));
+        }
     }
 
     [TestFixture]
@@ -1005,6 +1023,25 @@ namespace Rol.Tests
             {
                 Assert.AreEqual((int)Math.Pow(i, 2), await hash.GetAsync(i));
             }
+        }
+
+        [Test]
+        public void HashOfSets()
+        {
+            var hash = Store.Get<IRedisHash<int, IRedisSet<int>>>("GotMeAHashOfSetsOfInt");
+            var set = Store.Get<IRedisSet<int>>("GotMeASetOfInts");
+            set.Add(1, 2, 3, 4, 5);
+
+            var set2 = Store.Get<IRedisSet<int>>("GotMeASetOfInts2");
+            set2.Add(4, 5, 6, 7, 8);
+
+            hash[1] = set;
+            hash[2] = set2;
+
+            Assert.AreEqual(set, hash[1]);
+            Assert.AreEqual(set2, hash[2]);
+
+            Assert.True(hash.SelectMany(o => o.Value).OrderBy(o => o).SequenceEqual(new[] { 1, 2, 3, 4, 4, 5, 5, 6, 7, 8}));
         }
     }
 
