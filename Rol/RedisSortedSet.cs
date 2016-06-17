@@ -8,7 +8,7 @@ namespace Rol
 {
     public interface IRedisSortedSet<TKey> : IEnumerable<TKey>
     {
-        RedisKey Id { get; }
+        string Id { get; }
         double this[TKey key] { get; set; }
         long Count();
         Task<long> CountAsync();
@@ -28,11 +28,11 @@ namespace Rol
 
     class RedisSortedSet<TKey> : IRedisSortedSet<TKey>
     {
-        public RedisKey _id;
-        public RedisKey Id { get { return _id; } }
+        public string _id;
+        public string Id { get { return _id; } }
         public Store Store;
 
-        public RedisSortedSet(RedisKey id, Store store)
+        public RedisSortedSet(string id, Store store)
         {
             _id = id;
             Store = store;

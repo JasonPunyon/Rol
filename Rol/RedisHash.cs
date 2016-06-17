@@ -8,7 +8,7 @@ namespace Rol
 {
     public interface IRedisHash<TKey, TValue> : IEnumerable<KeyValuePair<TKey, TValue>>
     {
-        RedisKey Id { get; }
+        string Id { get; }
         TValue this[TKey key, When when = When.Always] { get; set; }
         IEnumerable<TKey> Keys { get; }
         Task<IEnumerable<TKey>> KeysAsync { get; }
@@ -29,16 +29,16 @@ namespace Rol
 
     class RedisHash<TKey, TValue> :  IRedisHash<TKey, TValue>
     {
-        public RedisKey _id;
+        public string _id;
 
-        public RedisKey Id
+        public string Id
         {
             get { return _id; }
         }
 
         public readonly Store Store;
 
-        public RedisHash(RedisKey id, Store store)
+        public RedisHash(string id, Store store)
         {
             _id = id;
             Store = store;

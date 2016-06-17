@@ -78,23 +78,23 @@ namespace Rol
                 .ContinueWith(o => value.SetValue);
         }
 
-        public static TElement GetCompactProp<TElement>(Store store, RedisKey arrayName, int index)
+        public static TElement GetCompactProp<TElement>(Store store, string arrayName, int index)
         {
             var arr = store.Get<IRedisArray<TElement>>(arrayName);
             return arr[index];
         }
 
-        public static Async<TElement> GetCompactPropAsync<TElement>(Store store, RedisKey arrayName, int index)
+        public static Async<TElement> GetCompactPropAsync<TElement>(Store store, string arrayName, int index)
         {
             return (Async<TElement>)store.Get<IRedisArray<TElement>>(arrayName).GetAsync(index);
         }
 
-        public static void SetCompactProp<TElement>(Store store, RedisKey arrayName, int index, TElement val)
+        public static void SetCompactProp<TElement>(Store store, string arrayName, int index, TElement val)
         {
             store.Get<IRedisArray<TElement>>(arrayName).Set(index, val);
         }
 
-        public static void SetCompactPropAsync<TElement>(Store store, RedisKey arrayName, int index, Async<TElement> val)
+        public static void SetCompactPropAsync<TElement>(Store store, string arrayName, int index, Async<TElement> val)
         {
             val.SetTask = store.Get<IRedisArray<TElement>>(arrayName).SetAsync(index, val.SetValue).ContinueWith(o => val.SetValue);
         }

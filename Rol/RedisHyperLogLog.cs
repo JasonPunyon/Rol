@@ -6,7 +6,7 @@ namespace Rol
 {
     public interface IRedisHyperLogLog<T>
     {
-        RedisKey Id { get; }
+        string Id { get; }
         bool Add(T element);
         long Count();
         void Merge(params IRedisHyperLogLog<T>[] otherHyperLogLogs);
@@ -15,13 +15,13 @@ namespace Rol
 
     internal class RedisHyperLogLog<T> : IRedisHyperLogLog<T>
     {
-        public RedisKey _id;
-        public RedisKey Id { get { return _id; } }
+        public string _id;
+        public string Id { get { return _id; } }
         public Store Store;
 
         public RedisHyperLogLog() { }
 
-        public RedisHyperLogLog(RedisKey id, Store store)
+        public RedisHyperLogLog(string id, Store store)
         {
             _id = id;
             Store = store;
@@ -49,12 +49,12 @@ namespace Rol
 
         public void Merge(params IRedisHyperLogLog<T>[] otherHyperLogLogs)
         {
-            Store.Connection.GetDatabase().HyperLogLogMerge(_id, otherHyperLogLogs.Select(p => p.Id).ToArray());
+            Store.Connection.GetDatabase().HyperLogLogMerge(_id, otherHyperLogLogs.Select(p => (RedisKey)p.Id).ToArray());
         }
 
         public Task MergeAsync(params IRedisHyperLogLog<T>[] otherHyperLogLogs)
         {
-            return Store.Connection.GetDatabase().HyperLogLogMergeAsync(_id, otherHyperLogLogs.Select(p => p.Id).ToArray());
+            return Store.Connection.GetDatabase().HyperLogLogMergeAsync(_id, otherHyperLogLogs.Select(p => (RedisKey)p.Id).ToArray());
         }
 
         public RedisTTL TTL => new RedisTTL(_id, Store);

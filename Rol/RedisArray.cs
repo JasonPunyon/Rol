@@ -515,7 +515,7 @@ namespace Rol
 
     public interface IRedisArray<T>
     {
-        RedisKey Id { get; }
+        string Id { get; }
         T Get(int index);
         Task<T> GetAsync(int index);
         Task<T[]> GetAsync(int startIndex, int endIndex);
@@ -530,15 +530,17 @@ namespace Rol
         Task<long> LengthAsync { get; }
         long Append(T val);
         Task<long> AppendAsync(T val);
+        T[] Get();
+        Task<T[]> GetAsync();
     }
 
     class RedisArray<T> : IRedisArray<T>
     {
-        public RedisKey _id;
-        public RedisKey Id => _id;
+        public string _id;
+        public string Id => _id;
         public readonly Store Store;
 
-        public RedisArray(RedisKey id, Store store)
+        public RedisArray(string id, Store store)
         {
             _id = id;
             Store = store;
@@ -650,5 +652,31 @@ namespace Rol
         public Task<long> AppendAsync(T val) => Store.Connection.GetDatabase()
             .StringAppendAsync(_id, ToFixedWidthBytes<T>.Impl.Value(val))
             .ContinueWith(o => o.Result/TypeModel<T>.Model.FixedWidth);
+
+        public T[] Get()
+        {
+            var bytes = (byte[])Store.Connection.GetDatabase().StringGet(_id);
+            var result = new T[bytes.Length/TypeModel<T>.Model.FixedWidth];
+
+            for (var j = 0; j < bytes.Length / TypeModel<T>.Model.FixedWidth; j += 1)
+            {
+                result[j] = FromFixedWidthBytes<T>.ImplOffset.Value(bytes, j * TypeModel<T>.Model.FixedWidth, Store);
+            }
+
+            return result;
+        }
+
+        public async Task<T[]> GetAsync()
+        {
+            var bytes = (byte[])(await Store.Connection.GetDatabase().StringGetAsync(_id));
+            var result = new T[bytes.Length / TypeModel<T>.Model.FixedWidth];
+
+            for (var j = 0; j < bytes.Length / TypeModel<T>.Model.FixedWidth; j += 1)
+            {
+                result[j] = FromFixedWidthBytes<T>.ImplOffset.Value(bytes, j * TypeModel<T>.Model.FixedWidth, Store);
+            }
+
+            return result;
+        }
     }
 }

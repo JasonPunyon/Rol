@@ -422,11 +422,10 @@ namespace Rol
                 }
 
                 getIl.Call(MethodInfos.StringFormat);
-                getIl.Call(MethodInfos.StringToRedisKey);
                 getIl.LoadArgument(0);
                 getIl.LoadField(DeclaringTypeModel.StoreField);
 
-                getIl.NewObject(type.GetConstructor(new[] {typeof (RedisKey), typeof (Store)}));
+                getIl.NewObject(type.GetConstructor(new[] {typeof (string), typeof (Store)}));
                 getIl.Return();
 
                 prop.SetGetMethod(getIl.CreateMethod());
@@ -447,7 +446,6 @@ namespace Rol
                     getIl.LoadField(DeclaringTypeModel.StoreField);
 
                     getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis.Replace("Async", "")}");
-                    getIl.Call(MethodInfos.StringToRedisKey);
                     getIl.LoadArgument(0);
                     getIl.LoadField(DeclaringTypeModel.IdField);
                     getIl.Call(getMi);
@@ -460,7 +458,6 @@ namespace Rol
                     setIl.LoadArgument(0);
                     setIl.LoadField(DeclaringTypeModel.StoreField);
                     setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis.Replace("Async", "")}");
-                    setIl.Call(MethodInfos.StringToRedisKey);
                     setIl.LoadArgument(0);
                     setIl.LoadField(DeclaringTypeModel.IdField);
                     setIl.LoadArgument(1);
@@ -528,7 +525,6 @@ namespace Rol
                     getIl.LoadArgument(0);
                     getIl.LoadField(DeclaringTypeModel.StoreField);
                     getIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis}");
-                    getIl.Call(MethodInfos.StringToRedisKey);
                     getIl.LoadArgument(0);
                     getIl.LoadField(DeclaringTypeModel.IdField);
                     getIl.Call(typeof (RedisOperations).GetMethod("GetCompactProp").MakeGenericMethod(Type));
@@ -539,7 +535,6 @@ namespace Rol
                     setIl.LoadArgument(0);
                     setIl.LoadField(DeclaringTypeModel.StoreField);
                     setIl.LoadConstant($"/{DeclaringTypeModel.NameToUseInRedis}/{NameToUseInRedis}");
-                    setIl.Call(MethodInfos.StringToRedisKey);
                     setIl.LoadArgument(0);
                     setIl.LoadField(DeclaringTypeModel.IdField);
                     setIl.LoadArgument(1);

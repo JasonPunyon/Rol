@@ -8,7 +8,7 @@ namespace Rol
 {
     public interface IRedisList<T> : IEnumerable<T>
     {
-        RedisKey Id { get; }
+        string Id { get; }
         int Count { get; }
         T GetByIndex(int index);
         Task<T> GetByIndexAsync(int index);
@@ -34,16 +34,17 @@ namespace Rol
 
     class RedisList<T> : IRedisList<T>
     {
-        public RedisKey _id;
-        public RedisKey Id { get { return _id; } }
+        public string _id;
+        public string Id { get { return _id; } }
 
         public Store Store;
 
-        public RedisList(RedisKey id, Store store)
+        public RedisList(string id, Store store)
         {
             _id = id;
             Store = store;
         }
+
         public RedisList() { } 
 
         public int Count => (int)Store.Connection.GetDatabase().ListLength(_id);

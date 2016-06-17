@@ -140,7 +140,7 @@ namespace Rol.Tests
             Assert.True(theObject == Store.Get<ISomeInterface>(1));
 
             //If you get it from a collection, they should be equal...
-            var theSet = Store.Get<IRedisSet<ISomeInterface>>((RedisKey) "TheSet");
+            var theSet = Store.Get<IRedisSet<ISomeInterface>>("TheSet");
             theSet.Add(theObject);
 
             Assert.True(theObject == theSet.First());
@@ -499,7 +499,7 @@ namespace Rol.Tests
         [Test]
         public void NakedSet()
         {
-            var set = Store.Get<IRedisSet<int>>((RedisKey)"/helloworld");
+            var set = Store.Get<IRedisSet<int>>("/helloworld");
             Assert.AreEqual(0, set.Count);
 
             set.Add(12345); //That's the same combination I have on my luggage!
@@ -509,7 +509,7 @@ namespace Rol.Tests
         [Test]
         public void NakedHash()
         {
-            var hash = Store.Get<IRedisHash<int, int>>((RedisKey) "/helloworld");
+            var hash = Store.Get<IRedisHash<int, int>>("/helloworld");
             hash[3] = 17;
 
             Assert.AreEqual(17, hash[3]);
@@ -522,7 +522,7 @@ namespace Rol.Tests
         [Test]
         public void NakedList()
         {
-            var list = Store.Get<IRedisList<int>>((RedisKey) "/helloworld");
+            var list = Store.Get<IRedisList<int>>("/helloworld");
             Assert.AreEqual(0, list.Count);
 
             list.PushHead(48);
@@ -532,7 +532,7 @@ namespace Rol.Tests
         [Test]
         public void NakedSortedSet()
         {
-            var sortedSet = Store.Get<IRedisSortedSet<string>>((RedisKey) "/helloworld");
+            var sortedSet = Store.Get<IRedisSortedSet<string>>("/helloworld");
             Assert.AreEqual(0, sortedSet.WithRanksBetween(0, -1).Count());
             sortedSet["What up"] = 1.0;
 
@@ -543,7 +543,7 @@ namespace Rol.Tests
         [Test]
         public void NakedHyperLogLog()
         {
-            var hyperLogLog = Store.Get<IRedisHyperLogLog<Guid>>((RedisKey) "/helloworld");
+            var hyperLogLog = Store.Get<IRedisHyperLogLog<Guid>>("/helloworld");
             Assert.AreEqual(0, hyperLogLog.Count());
             foreach (var i in Enumerable.Range(1, 10000))
             {
@@ -561,62 +561,62 @@ namespace Rol.Tests
         [Test]
         public void NakedArray()
         {
-            var intArray = Store.Get<IRedisArray<int>>((RedisKey)"/int-array");
+            var intArray = Store.Get<IRedisArray<int>>("/int-array");
             var intVal = new Random().Next();
             intArray[0] = intVal;
             Assert.AreEqual(intVal, intArray[0]);
 
-            var uintArray = Store.Get<IRedisArray<uint>>((RedisKey) "/uint-array");
+            var uintArray = Store.Get<IRedisArray<uint>>("/uint-array");
             var uintVal = (uint) new Random().Next();
             uintArray[0] = uintVal;
             Assert.AreEqual(uintVal, uintArray[0]);
 
-            var shortArray = Store.Get<IRedisArray<short>>((RedisKey) "/short-array");
+            var shortArray = Store.Get<IRedisArray<short>>("/short-array");
             var shortVal = (short) new Random().Next(short.MaxValue);
             shortArray[0] = shortVal;
             Assert.AreEqual(shortVal, shortArray[0]);
 
-            var uShortArray = Store.Get<IRedisArray<ushort>>((RedisKey) "/ushort-array");
+            var uShortArray = Store.Get<IRedisArray<ushort>>("/ushort-array");
             var ushortVal = (ushort) new Random().Next(ushort.MaxValue);
             uShortArray[0] = ushortVal;
             Assert.AreEqual(ushortVal, uShortArray[0]);
 
-            var longArray = Store.Get<IRedisArray<long>>((RedisKey) "/long-array");
+            var longArray = Store.Get<IRedisArray<long>>("/long-array");
             var longVal = new Random().Next();
             longArray[0] = longVal;
             Assert.AreEqual(longVal, longArray[0]);
 
-            var ulongArray = Store.Get<IRedisArray<ulong>>((RedisKey) "/ulong-array");
+            var ulongArray = Store.Get<IRedisArray<ulong>>("/ulong-array");
             var ulongVal = (ulong)new Random().Next();
             ulongArray[0] = ulongVal;
             Assert.AreEqual(ulongVal, ulongArray[0]);
 
-            var floatArray = Store.Get<IRedisArray<float>>((RedisKey) "/float-array");
+            var floatArray = Store.Get<IRedisArray<float>>("/float-array");
             var floatVal = (float) new Random().NextDouble();
             floatArray[0] = floatVal;
             Assert.AreEqual(floatVal, floatArray[0]);
 
-            var doubleArray = Store.Get<IRedisArray<double>>((RedisKey) "/double-array");
+            var doubleArray = Store.Get<IRedisArray<double>>("/double-array");
             var doubleVal = new Random().NextDouble();
             doubleArray[0] = doubleVal;
             Assert.AreEqual(doubleVal, doubleArray[0]);
 
-            var charArray = Store.Get<IRedisArray<char>>((RedisKey) "/char-array");
+            var charArray = Store.Get<IRedisArray<char>>("/char-array");
             char charVal = '☃';
             charArray[0] = charVal;
             Assert.AreEqual(charVal, charArray[0]);
 
-            var memTestArray = Store.Get<IRedisArray<IMemTest>>((RedisKey) "/imemtest-array");
+            var memTestArray = Store.Get<IRedisArray<IMemTest>>("/imemtest-array");
             var memTestVal = Store.Get<IMemTest>(1);
             memTestArray[0] = memTestVal;
             Assert.AreEqual(memTestVal, memTestArray[0]);
 
-            var dateTimeArray = Store.Get<IRedisArray<DateTime>>((RedisKey) "/datetime-array");
+            var dateTimeArray = Store.Get<IRedisArray<DateTime>>("/datetime-array");
             var dateTimeVal = DateTime.UtcNow.AddDays(new Random().Next(0, 1000));
             dateTimeArray[0] = dateTimeVal;
             Assert.AreEqual(dateTimeVal, dateTimeArray[0]);
 
-            var guidArray = Store.Get<IRedisArray<Guid>>((RedisKey) "/guid-array");
+            var guidArray = Store.Get<IRedisArray<Guid>>("/guid-array");
             var guidVal = Guid.NewGuid();
             guidArray[0] = guidVal;
             Assert.AreEqual(guidVal, guidArray[0]);
@@ -731,7 +731,7 @@ namespace Rol.Tests
         {
             for (var i = 1; i < 100000; i += 1000)
             {
-                var arr = Store.Get<IRedisArray<int>>((RedisKey)i.ToString());
+                var arr = Store.Get<IRedisArray<int>>(i.ToString());
                 var data = Enumerable.Range(0, i).ToArray();
 
                 arr.Set(data);
@@ -745,7 +745,7 @@ namespace Rol.Tests
         {
             for (var i = 1; i < 100000; i += 1000)
             {
-                var arr = Store.Get<IRedisArray<int>>((RedisKey)i.ToString());
+                var arr = Store.Get<IRedisArray<int>>(i.ToString());
                 var data = Enumerable.Range(0, i).ToArray();
 
                 await arr.SetAsync(data);
@@ -757,7 +757,7 @@ namespace Rol.Tests
         [Test]
         public void TestPoco()
         {
-            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey)"an-intclass-array");
+            var arr = Store.Get<IRedisArray<IntClass>>("an-intclass-array");
             var val = new IntClass
             {
                 FirstInt = 1,
@@ -782,7 +782,7 @@ namespace Rol.Tests
                 FirstInt = 1,
             };
 
-            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey)"an-intclass-array");
+            var arr = Store.Get<IRedisArray<IntClass>>("an-intclass-array");
 
             var sw = Stopwatch.StartNew();
 
@@ -802,7 +802,7 @@ namespace Rol.Tests
 
             await Task.WhenAll(Enumerable.Range(1, 7000000).Select(o =>
             {
-                var arr = Store.Get<IRedisArray<IntClass>>((RedisKey) $"ic-a{o}");
+                var arr = Store.Get<IRedisArray<IntClass>>($"ic-a{o}");
                 return arr.SetAsync(Enumerable.Repeat(val, 1).ToArray());
             }));
         }
@@ -816,7 +816,7 @@ namespace Rol.Tests
         [Test]
         public void Append()
         {
-            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey) "Key");
+            var arr = Store.Get<IRedisArray<IntClass>>("Key");
             arr.Append(new IntClass {DateTime = DateTime.UtcNow, FirstInt = 3});
             Assert.AreEqual(1, arr.Length);
             arr.Append(new IntClass { DateTime = DateTime.UtcNow, FirstInt = 4 });
@@ -826,7 +826,7 @@ namespace Rol.Tests
         [Test]
         public async Task AppendAsync()
         {
-            var arr = Store.Get<IRedisArray<IntClass>>((RedisKey) "Key");
+            var arr = Store.Get<IRedisArray<IntClass>>("Key");
             await arr.AppendAsync(new IntClass() {DateTime = DateTime.UtcNow, FirstInt = 1});
             Assert.AreEqual(1, await arr.LengthAsync);
             await arr.AppendAsync(new IntClass() {DateTime = DateTime.UtcNow, FirstInt = 2});
@@ -848,7 +848,7 @@ namespace Rol.Tests
         public void PocoWithInterfaceTypePropertyWorks()
         {
             var iprop = Store.Get<IInterfaceTypeProperty>(1);
-            var arr = Store.Get<IRedisArray<PocoWithInterfaceTypeProperty>>((RedisKey) "YouKnowIt");
+            var arr = Store.Get<IRedisArray<PocoWithInterfaceTypeProperty>>("YouKnowIt");
 
             var now = DateTime.UtcNow;
 
@@ -857,15 +857,39 @@ namespace Rol.Tests
             Assert.AreEqual(now, readValue.Date);
             Assert.AreEqual(iprop, readValue.InterfaceTypeProperty);
         }
+
+        [Test]
+        public void Get()
+        {
+            var arr = Store.Get<IRedisArray<int>>("ILOVEKEYS");
+            arr.Append(3);
+            Assert.AreEqual(3, arr.Get()[0]);
+            arr.Append(4);
+            var gotten = arr.Get();
+            Assert.AreEqual(3, gotten[0]);
+            Assert.AreEqual(4, gotten[1]);
+        }
+
+        [Test]
+        public async Task GetAsync()
+        {
+            var arr = Store.Get<IRedisArray<int>>("ILOVEKEYS");
+            arr.Append(3);
+            Assert.AreEqual(3, (await arr.GetAsync())[0]);
+            arr.Append(4);
+            var gotten = await(arr.GetAsync());
+            Assert.AreEqual(3, gotten[0]);
+            Assert.AreEqual(4, gotten[1]);
+        }
     }
 
     [TestFixture]
     public class RedisSet : RolFixture
     {
         [Test]
-        public async void RemoveAll()
+        public async Task RemoveAll()
         {
-            var set = Store.Get<IRedisSet<int>>((RedisKey) "helloworld");
+            var set = Store.Get<IRedisSet<int>>("helloworld");
             set.Add(1);
             set.Add(2);
             set.Add(3);
@@ -882,6 +906,64 @@ namespace Rol.Tests
             await set.RemoveAllAsync();
             Assert.AreEqual(0, set.Count);
         }
+
+        [Test]
+        public void Intersect()
+        {
+            var set1 = Store.Get<IRedisSet<int>>("set1");
+            var set2 = Store.Get<IRedisSet<int>>("set2");
+            var set3 = Store.Get<IRedisSet<int>>("set3");
+
+            set1.Add(1, 2, 3, 4, 5, 6);
+            set2.Add(3, 4, 5, 6, 7, 8);
+
+            Assert.True(new[] {3, 4, 5, 6}.SequenceEqual(set1.Intersect(set2).OrderBy(o => o)));
+
+            set1.IntersectAndStore(set3, set2);
+            Assert.True(new[] {3, 4, 5, 6}.SequenceEqual(set3.OrderBy(o => o)));
+        }
+
+        [Test]
+        public void Union()
+        {
+            var set1 = Store.Get<IRedisSet<int>>("set1");
+            var set2 = Store.Get<IRedisSet<int>>("set2");
+            var set3 = Store.Get<IRedisSet<int>>("set3");
+
+            set1.Add(1, 2, 3, 4, 5, 6);
+            set2.Add(3, 4, 5, 6, 7, 8);
+
+            Assert.True(new[] { 1, 2, 3, 4, 5, 6, 7, 8 }.SequenceEqual(set1.Union(set2).OrderBy(o => o)));
+
+            set1.UnionAndStore(set3, set2);
+            Assert.True(new[] { 1, 2, 3, 4, 5, 6, 7, 8 }.SequenceEqual(set3.OrderBy(o => o)));
+        }
+
+        [Test]
+        public void Diff()
+        {
+            var set1 = Store.Get<IRedisSet<int>>("set1");
+            var set2 = Store.Get<IRedisSet<int>>("set2");
+            var set3 = Store.Get<IRedisSet<int>>("set3");
+
+            set1.Add(1, 2, 3, 4, 5, 6);
+            set2.Add(3, 4, 5, 6, 7, 8);
+
+            Assert.True(new[] { 1, 2 }.SequenceEqual(set1.Difference(set2).OrderBy(o => o)));
+            Assert.True(new[] { 7, 8 }.SequenceEqual(set2.Difference(set1).OrderBy(o => o)));
+
+            set1.DifferenceAndStore(set3, set2);
+            Assert.True(new[] { 1, 2 }.SequenceEqual(set3.OrderBy(o => o)));
+        }
+
+        //[Test]
+        //public void SetOfSets()
+        //{
+        //    //var setOfSetsOfInt = Store.Get<IRedisSet<IRedisSet<int>>>((RedisKey) "set-of-sets");
+        //    //var setOfInt = Store.Get<IRedisSet<int>>((RedisKey) "set-of-int");
+
+        //    //setOfSetsOfInt.Add(setOfInt);
+        //}
     }
 
     [TestFixture]
@@ -890,7 +972,7 @@ namespace Rol.Tests
         [Test]
         public async void RemoveAll()
         {
-            var hash = Store.Get<IRedisHash<int, int>>((RedisKey) "Helloworld");
+            var hash = Store.Get<IRedisHash<int, int>>("Helloworld");
             hash[3] = 4;
             hash[4] = 5;
             hash[5] = 6;
@@ -909,7 +991,7 @@ namespace Rol.Tests
         [Test]
         public async void MultiSet()
         {
-            var hash = Store.Get<IRedisHash<int, int>>((RedisKey) "helloworld");
+            var hash = Store.Get<IRedisHash<int, int>>("helloworld");
             hash.Set(Enumerable.Range(0, 100).ToDictionary(o => o, o => (int) Math.Pow(o, 2)));
             for (var i = 0; i < 100; i++)
             {
@@ -932,7 +1014,7 @@ namespace Rol.Tests
         [Test]
         public async void Remove()
         {
-            var sortedSet = Store.Get<IRedisSortedSet<int>>((RedisKey) "helloworld");
+            var sortedSet = Store.Get<IRedisSortedSet<int>>("helloworld");
             sortedSet[1] = 5;
             sortedSet[2] = 6;
             Assert.AreEqual(2, sortedSet.Count());
