@@ -38,7 +38,7 @@ public interface IQuestion
 
 ##The Store
 
-The Store is how you get at your data in redis. The Store wraps StackExchange.Redis's ConnectionMultiplexer to do it's work, so that's all it needs.
+The Store is how you get at your data in redis. The Store wraps StackExchange.Redis's ConnectionMultiplexer to do its work, so that's all it needs.
 
 ```c#
 var connection = StackExchange.Redis.ConnectionMultiplexer.Connect("localhost");
@@ -208,7 +208,7 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
     var question = Store.Get<IQuestion>(questionId);
     var answer = Store.Create<IAnswer>();
     answer.Body = aBody;
-    answer.User = user;
+    answer.Answerer = user;
     answer.Question = question;
     question.Answers.Add(answer);
 }
@@ -235,7 +235,7 @@ public void IntRedisArrayProperty()
 }
 ```
 
-Notice that we never had to give the array dimension, it will automatically grow as necessary. The array is backed by 64K redis strings (that number plucked from the sky), so that's the maximum it will ever allocate in redis when writing a single element.
+Notice that we never had to give the array dimension, it will automatically grow as necessary up to 512MB in size.
 
 ###POCOs
 
@@ -289,7 +289,7 @@ public async Task WorkWithTitle(int questionId)
     var title = await q.TitleAsync; //Await the title asynchronously
     Console.WriteLine(title); //"This is a great title, isn't it?";
     
-    q.TitleAsync = "New Title!"; //T's are implicitly convertible to Async<T> so we can set properties values asynchronously. Rol handles everything under the covers.
+    q.TitleAsync = "New Title!"; //T's are implicitly convertible to Async<T> so we can set property values asynchronously. Rol handles everything under the covers.
     
     title = q.Title; //Read the title synchronously
     Console.WriteLine(title); //"New Title!"
