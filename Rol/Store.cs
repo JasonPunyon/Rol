@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Reflection.Emit;
@@ -95,6 +96,11 @@ namespace Rol
         public void WaitAll(Task[] tasks)
         {
             Connection.WaitAll(tasks);
+        }
+
+        public void DumpAssembly(string path = null)
+        {
+            Assembly.Dump(path);
         }
     }
 
@@ -284,8 +290,8 @@ namespace Rol
                 _tb.AddInterfaceImplementation(iface);
             }
 
-            Model.StoreField = _tb.DefineField("Store", typeof (Store), FieldAttributes.Public);
-            Model.IdField = _tb.DefineField("_id", Model.IdType, FieldAttributes.Public);
+            Model.StoreField = _tb.DefineField("Store", typeof (Store), FieldAttributes.FamORAssem);
+            Model.IdField = _tb.DefineField("_id", Model.IdType, FieldAttributes.FamORAssem);
 
             foreach (var property in Model.Properties)
             {
@@ -294,8 +300,8 @@ namespace Rol
 
             var result = _tb.CreateType();
 
-            Model.StoreField = result.GetField("Store");
-            Model.IdField = result.GetField("_id");
+            Model.StoreField = result.GetField("Store", BindingFlags.NonPublic | BindingFlags.Instance);
+            Model.IdField = result.GetField("_id", BindingFlags.NonPublic | BindingFlags.Instance);
             Model.IdProperty = result.GetProperty("Id");
 
             return _tb.CreateType();
@@ -304,13 +310,21 @@ namespace Rol
 
     class Assembly
     {
-        public static AssemblyBuilder ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("StoreImplementations"), AssemblyBuilderAccess.RunAndSave);
+        public static CustomAttributeBuilder internalsVisibleTo = new CustomAttributeBuilder(typeof (InternalsVisibleToAttribute).GetConstructor(new[] {typeof (string)}), new[] {"Rol"});
+        public static AssemblyBuilder ab = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("StoreImplementations"), AssemblyBuilderAccess.RunAndSave, new[] { internalsVisibleTo });
         public static ModuleBuilder mb = ab.DefineDynamicModule("module", "StoreImplementations.dll");
         public static readonly MethodAttributes MethodAttributes = MethodAttributes.Public | MethodAttributes.Virtual | MethodAttributes.Final | MethodAttributes.SpecialName | MethodAttributes.NewSlot | MethodAttributes.HideBySig;
 
-        public static void Dump()
+        public static void Dump(string path)
         {
             ab.Save("StoreImplementations.dll");
+            if (!string.IsNullOrWhiteSpace(path))
+            {
+                foreach (var file in Directory.GetFiles(Directory.GetCurrentDirectory(), "*.dll"))
+                {
+                    File.Copy(file, Path.Combine(path, Path.GetFileName(file)));
+                }
+            }
         }
     }
 
