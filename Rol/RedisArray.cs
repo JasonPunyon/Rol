@@ -529,7 +529,9 @@ namespace Rol
         long Length { get; }
         Task<long> LengthAsync { get; }
         long Append(T val);
+        long Append(T[] values);
         Task<long> AppendAsync(T val);
+        Task<long> AppendAsync(T[] values);
         T[] Get();
         Task<T[]> GetAsync();
     }
@@ -649,9 +651,30 @@ namespace Rol
         public long Append(T val) => Store.Connection.GetDatabase()
             .StringAppend(_id, ToFixedWidthBytes<T>.Impl.Value(val)) / TypeModel<T>.Model.FixedWidth;
 
+        public long Append(T[] values)
+        {
+            var bytesToAppend = new byte[values.Length*TypeModel<T>.Model.FixedWidth];
+            for (var i = 0; i < values.Length; i++)
+            {
+                WriteToArrayOffset<T>.Impl.Value(values[i], bytesToAppend, i * TypeModel<T>.Model.FixedWidth);
+            }
+
+            return Store.Connection.GetDatabase().StringAppend(_id, bytesToAppend);
+        }
+
         public Task<long> AppendAsync(T val) => Store.Connection.GetDatabase()
             .StringAppendAsync(_id, ToFixedWidthBytes<T>.Impl.Value(val))
             .ContinueWith(o => o.Result/TypeModel<T>.Model.FixedWidth);
+
+        public Task<long> AppendAsync(T[] values)
+        {
+            var bytesToAppend = new byte[values.Length*TypeModel<T>.Model.FixedWidth];
+            for (var i = 0; i < values.Length; i++)
+            {
+                WriteToArrayOffset<T>.Impl.Value(values[i], bytesToAppend, i * TypeModel<T>.Model.FixedWidth);
+            }
+            return Store.Connection.GetDatabase().StringAppendAsync(_id, bytesToAppend);
+        }
 
         public T[] Get()
         {

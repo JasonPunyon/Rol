@@ -881,6 +881,26 @@ namespace Rol.Tests
             Assert.AreEqual(3, gotten[0]);
             Assert.AreEqual(4, gotten[1]);
         }
+
+        [Test]
+        public void AppendMany()
+        {
+            var r = new Random();
+            var theData = Enumerable.Range(1, 100).Select(o => r.Next()).ToArray();
+            var arr = Store.Get<IRedisArray<int>>("ILOVEKEYS");
+            arr.Append(theData);
+            Assert.True(theData.SequenceEqual(arr.Get()));
+        }
+
+        [Test]
+        public async Task AppendManyAsync()
+        {
+            var r = new Random();
+            var theData = Enumerable.Range(1, 100).Select(o => r.Next()).ToArray();
+            var arr = Store.Get<IRedisArray<int>>("ILOVEKEYS");
+            await arr.AppendAsync(theData);
+            Assert.True(theData.SequenceEqual(arr.Get()));
+        }
     }
 
     [TestFixture]
