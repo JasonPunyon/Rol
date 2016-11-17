@@ -13,6 +13,7 @@ namespace Rol
         T GetByIndex(int index);
         Task<T> GetByIndexAsync(int index);
         T Head();
+        IEnumerable<T> Head(int count);
         Task<T> HeadAsync();
         void PushHead(T item);
         T Tail();
@@ -61,6 +62,11 @@ namespace Rol
         public T Head()
         {
             return GetByIndex(0);
+        }
+
+        public IEnumerable<T> Head(int count)
+        {
+            return Store.Connection.GetDatabase().ListRange(_id, 0, count - 1).Select(o => FromRedisValue<T>.Impl.Value(o, Store));
         }
 
         public Task<T> HeadAsync()
