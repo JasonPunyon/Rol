@@ -901,6 +901,26 @@ namespace Rol.Tests
             await arr.AppendAsync(theData);
             Assert.True(theData.SequenceEqual(arr.Get()));
         }
+
+        [Test]
+        public void AppendManyDoubles()
+        {
+            var r = new Random();
+            var theData = Enumerable.Range(1, 100).Select(o => r.NextDouble()).ToArray();
+            var arr = Store.Get<IRedisArray<double>>("ILOVEKEYS");
+            arr.Append(theData);
+            Assert.True(theData.SequenceEqual(arr.Get()));
+        }
+
+        [Test]
+        public async Task AppendManyDoublesAsync()
+        {
+            var r = new Random();
+            var theData = Enumerable.Range(1, 100).Select(o => r.NextDouble()).ToArray();
+            var arr = Store.Get<IRedisArray<double>>("ILOVEKEYS");
+            await arr.AppendAsync(theData);
+            Assert.True(theData.SequenceEqual(arr.Get()));
+        }
     }
 
     [TestFixture]

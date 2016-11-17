@@ -120,6 +120,10 @@ namespace Rol
             {
                 il.Call(typeof (WriteToArrayOffset<bool>).GetMethod("WriteBool"));
             }
+            else if (typeof (T) == typeof (double))
+            {
+                il.Call(typeof (WriteToArrayOffset<double>).GetMethod("WriteDouble"));
+            }
             else if (TypeModel<T>.Model.IsInterface && TypeModel<T>.Model.IsFixedWidth)
             {
                 var idType = TypeModel<T>.Model.IdType;
@@ -153,6 +157,15 @@ namespace Rol
             il.Return();
 
             return il.CreateDelegate();
+        }
+
+        public static unsafe void WriteDouble(double value, byte[] buffer, int offset)
+        {
+            fixed (byte* pBuffer = buffer)
+            {
+                var ps = pBuffer + offset;
+                *((long*) ps) = *(long*)&value;
+            }
         }
 
         public static unsafe void WriteInt(int value, byte[] buffer, int offset)
