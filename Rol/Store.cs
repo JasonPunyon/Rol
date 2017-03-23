@@ -388,6 +388,19 @@ namespace Rol
                 return;
             }
 
+            if (Name == "Store" && Type == typeof(Store))
+            {
+                var storeProperty = typeBuilder.DefineProperty("Store", PropertyAttributes.None,
+                    CallingConventions.HasThis, Type, Type.EmptyTypes);
+
+                var getIl = Emit.BuildInstanceMethod(Type, Type.EmptyTypes, typeBuilder, "get_Store", MethodAttributes);
+                getIl.LoadArgument(0);
+                getIl.LoadField(DeclaringTypeModel.StoreField);
+                getIl.Return();
+
+                storeProperty.SetGetMethod(getIl.CreateMethod());
+            }
+
             if (Type == typeof (RedisTTL))
             {
                 var prop = typeBuilder.DefineProperty(Name, PropertyAttributes.None, CallingConventions.HasThis, Type, Type.EmptyTypes);
