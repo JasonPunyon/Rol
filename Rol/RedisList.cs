@@ -2,7 +2,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using StackExchange.Redis;
 
 namespace Rol
 {
@@ -30,6 +29,8 @@ namespace Rol
         Task<IEnumerable<T>> GetAllAsync();
         void RemoveAll();
         Task RemoveAllAsync();
+        T PopTailAndPushToHeadOf(IRedisList<T> destination);
+        Task<T> PopTailAndPushToHeadOfAsync(IRedisList<T> destination);
         RedisTTL TTL { get; }
     }
 
@@ -146,6 +147,16 @@ namespace Rol
         public Task RemoveAllAsync()
         {
             return Store.Connection.GetDatabase().KeyDeleteAsync(_id);
+        }
+
+        public T PopTailAndPushToHeadOf(IRedisList<T> destination)
+        {
+            return FromRedisValue<T>.Impl.Value(Store.Connection.GetDatabase().ListRightPopLeftPush(_id, destination.Id), Store);
+        }
+
+        public Task<T> PopTailAndPushToHeadOfAsync(IRedisList<T> destination)
+        {
+            return Store.Connection.GetDatabase().ListRightPopLeftPushAsync(_id, destination.Id).ContinueWith(o => FromRedisValue<T>.Impl.Value(o.Result, Store));
         }
 
         public IEnumerator<T> GetEnumerator()
