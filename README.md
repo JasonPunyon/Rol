@@ -6,7 +6,7 @@ I'm not nearly done with it yet, but it's already been extremely useful to me in
 
 <3 and thanks for taking the time to look.
 
-##Getting started
+## Getting started
 
 You can install Rol from nuget... [![NuGet Status](http://img.shields.io/nuget/v/Rol.svg?style=flat)](https://www.nuget.org/packages/Rol)
 
@@ -14,7 +14,7 @@ You can install Rol from nuget... [![NuGet Status](http://img.shields.io/nuget/v
 PM> Install-Package Rol
 ```
 
-##Your data
+## Your data
 
 The way you tell Rol about the data you want to store is by declaring an interface. Let's say we're building a silly question and answer website and we want to store our question data. Questions have an integer Id, a Title ("How do I X?"), and a Body with the detail of the question. We'd declare this interface...
 
@@ -36,7 +36,7 @@ public interface IQuestion
 
 **Note To The Reader:** Rol doesn't require you to do anything other than provide this interface. You do not have to write any concrete types that implement the interface or any other boilerplate. This is one of Rol's defining features. Embrace it.
 
-##The Store
+## The Store
 
 The Store is how you get at your data in redis. The Store wraps StackExchange.Redis's ConnectionMultiplexer to do its work, so that's all it needs.
 
@@ -47,7 +47,7 @@ var store = new Rol.Store(connection);
 
 The Store is magical. You only need one instance of the Store for your entire application. The Store is not a unit-of-work context object like you might find in an ORM. Spin it up once at the beginning of your app, stick it in a static variable and use it from whenever and wherever you please, on different threads, whatever.
 
-###Store.Get\<T>()
+### Store.Get\<T>()
 Rol requires little ceremony to start working with your data. If you already have the Id for an object you'd like to work with, just `Store.Get` that Id...
 
 ```c#
@@ -84,7 +84,7 @@ Notice:
 1. Also, there was no explicit "Read some stuff from Redis" operation. Every time you get a property's value, a read is issued to redis.
 1. Also, there was no explicit "Write some stuff to Redis" operation. Every time you set a property's value, a write is issued to redis.
 
-###Store.Create\<T>() / Store.Enumerate\<T>()
+### Store.Create\<T>() / Store.Enumerate\<T>()
 
 If your interface's Id is an `int`, the Store can provide you a "database table with an auto-incrementing primary key"-like experience by using `.Create<T>()` and `.Enumerate<T>()`.
 
@@ -107,11 +107,11 @@ public void CreatedIntegerIdsIncrease()
 
 ## What kinds of properties can I use in my interfaces?
 
-###You can use your basic types...
+### You can use your basic types...
 
 `bool`, `bool?`, `int`, `int?`, `string`, `double`, `double?`, `long`, `long?`, `DateTime`
 
-###References
+### References
 
 Our question and answer site is pretty lame right now. We can't even tell you who asked the question. So let's say we've got our user data...
 
@@ -149,7 +149,7 @@ public static void AskQuestion(int userId, string qTitle, string qBody)
 }
 ```
 
-###Redis Collections
+### Redis Collections
 
 You can add redis collections to your interfaces by using the `IRedisSet<T>`, `IRedisHash<TKey, TValue>`, `IRedisSortedSet<T>`, and `IRedisHyperLogLog<T>` interfaces. Our questions need tags so they can be organized. Let's update our interface.
 
@@ -214,7 +214,7 @@ public static void AnswerQuestion(int questionId, int userId, string aBody)
 }
 ```
 
-###IRedisArray\<T>
+### IRedisArray\<T>
 
 The `IRedisArray<T>` interface provides an array-like (O(1) access by index) collection for fixed size elements.
 
@@ -237,7 +237,7 @@ public void IntRedisArrayProperty()
 
 Notice that we never had to give the array dimension, it will automatically grow as necessary up to 512MB in size.
 
-###POCOs
+### POCOs
 
 Because let's face it, sometimes a property is a few fields together. POCOs get JSON serialized. The thing to watch out for is that changes made to the POCO don't get sent back to redis, you have to reset the POCO property on your interface instance for it to be persisted.
 
@@ -269,7 +269,7 @@ public static void WorkWithLocation(int userId, double lon, double lat)
 }
 ```
 
-###Async properties
+### Async properties
 
 You can tap into Rol's async support by declaring your properties of type `Async<T>`. Async<T>'s are awaitable just like tasks, and they're convertible to Task<T>, and they're convertible from their underlying types. Let's say we wanted to access the Title data of our IQuestion asynchronously...
 
@@ -303,7 +303,7 @@ public async Task WorkWithTitle(int questionId)
 }
 ```
 
-###RedisTTL
+### RedisTTL
 
 Adding a property of type `RedisTTL` allows you to expire your objects.
 
@@ -334,7 +334,7 @@ public void ExpirationTests()
 }
 ```
 
-##RolNameAttribute
+## RolNameAttribute
 
 One problem with storing objects in hashes the way Rol does is the overhead of type and property names. To put it ridiculously...
 
@@ -375,7 +375,7 @@ public interface IStuff
 ```
 ...Rol will faithfully follow you into oblivion, no questions asked.
 
-##CompactStorageAttribute
+## CompactStorageAttribute
 
 If your interface type has an integer Id you can take advantage of massive memory savings (at the cost of lost readability of/interactibility with the keyspace by humans) on fixed size properties by marking them with the `[CompactStorage]` attribute.
 
@@ -394,7 +394,7 @@ By default Rol stores your interface types in Hashes, with property names as the
 
 Using the `[CompactStorage]` attribute on a fixed size property tells Rol to store values for that property for all instances of that interface in a single `IRedisArray<TProperty>` indexed by Id. This eliminates the duplication of property names and saves scads of memory.
 
-##Equality
+## Equality
 
 A fun constraint in C# is that the only way for instances of interfaces to be considered equal is if they're the same object. Equality is important. You need equality to work for things to work like you want with Generic Collections and in other places.
 
