@@ -402,6 +402,6 @@ Rol makes equality work the only way it can, by guaranteeing you only get the sa
 
 **Note for the future**: Infinitely growing caches is bad, especially if you don't need them, but I really like Equality working. I'm going to add an attribute to turn off the caching if you don't need it for certain types (so you can opt in to memory-savings/broken equality if you want), but by default it will be on for sanity.
 
-#You made it all the way down here! Well done!
+# You made it all the way down here! Well done!
 
 More to come. Until then, enjoy yourself a tasty beverage and thank you for reading.
